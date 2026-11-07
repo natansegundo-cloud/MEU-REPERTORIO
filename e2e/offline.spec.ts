@@ -7,7 +7,9 @@ test('mantém a navegação essencial disponível depois de ficar offline', asyn
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: 'Biblioteca' })).toBeVisible();
   await page.evaluate(async () => {
-    if ('serviceWorker' in navigator) await navigator.serviceWorker.ready;
+    const serviceWorker = (navigator as Navigator & { serviceWorker?: { ready: Promise<unknown> } })
+      .serviceWorker;
+    if (serviceWorker) await serviceWorker.ready;
   });
 
   await context.setOffline(true);
