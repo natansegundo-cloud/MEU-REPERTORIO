@@ -1,9 +1,14 @@
+.vercel/
 node_modules/
 dist/
 coverage/
 playwright-report/
 test-results/
+lighthouse-report*
+lighthouse-reports/
+.lighthouseci/
 *.local
+*.log
 .env
 .env.*
 !.env.example
