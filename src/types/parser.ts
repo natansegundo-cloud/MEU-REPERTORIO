@@ -6,6 +6,7 @@ export type ParserDiagnosticCode =
   | 'EMPTY_INPUT'
   | 'NO_CONTENT'
   | 'KEY_NOT_PROVIDED'
+  | 'KEY_INFERRED'
   | 'NO_CHORDS_FOUND'
   | 'UNRECOGNIZED_CHORD'
   | 'INVALID_KEY'
@@ -55,6 +56,7 @@ export interface ParsedSongMetadata {
   readonly currentKey: string | null;
   readonly capo: string | null;
   readonly extraLines: readonly string[];
+  readonly originalKeyInferred?: boolean;
 }
 
 export interface ParsedSongReport {

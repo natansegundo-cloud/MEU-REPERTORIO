@@ -89,6 +89,66 @@ E ela está chorando`);
     expect(song.diagnostics.some((item) => item.code === 'UNRECOGNIZED_CHORD')).toBe(true);
   });
 
+  it('não avisa quando palavras de letra são apenas raízes soltas', () => {
+    const song = parseSongText(
+      [
+        'A força que afugenta as idéias',
+        'E tenta me dominar',
+        'Então a gente põe o pé na estrada',
+        'E de repente',
+      ].join('\n'),
+    );
+
+    expect(song.diagnostics.filter((item) => item.severity === 'warning')).toEqual([]);
+  });
+
+  it('mantém aviso para acorde ambíguo no meio da letra', () => {
+    const song = parseSongText('Hoje eu vou de Am7 pra casa');
+
+    expect(song.diagnostics.some((item) => item.code === 'UNRECOGNIZED_CHORD')).toBe(true);
+  });
+
+  it('separa rótulo com acordes em seção e linha de cifras sem perder colunas', () => {
+    const song = parseSongText('[Intro] Gm7  Dm7  Cm7  Eb7+\n        Gm7  Dm7  Cm7  Eb7+');
+
+    expect(song.diagnostics.filter((item) => item.severity === 'warning')).toEqual([]);
+    expect(song.lines.map((line) => line.kind)).toEqual(['section', 'chords', 'chords']);
+    expect(song.lines[0]?.sectionLabel).toBe('Intro');
+    expect(song.lines[1]?.chords.map((chord) => chord.symbol)).toEqual([
+      'Gm7',
+      'Dm7',
+      'Cm7',
+      'Eb7+',
+    ]);
+    expect(song.lines[1]?.chords.map((chord) => chord.position)).toEqual([8, 13, 18, 23]);
+    expect(song.lines[2]?.chords.map((chord) => chord.position)).toEqual([8, 13, 18, 23]);
+  });
+
+  it('separa Intro com cifras da mesma forma que a Pétala', () => {
+    const song = parseSongText('[Intro] A  A7M(2)  D7M  E7(4/9)');
+
+    expect(song.lines.map((line) => line.kind)).toEqual(['section', 'chords']);
+    expect(song.lines[0]?.sectionLabel).toBe('Intro');
+    expect(song.lines[1]?.chords.map((chord) => chord.position)).toEqual([8, 11, 19, 24]);
+  });
+
+  it('sugere o tom pelo primeiro acorde e marca a estimativa', () => {
+    const song = parseSongText('Gm7\nGm7  Dm7');
+
+    expect(song.originalKey).toBe('Gm');
+    expect(song.currentKey).toBe('Gm');
+    expect(song.metadata.originalKeyInferred).toBe(true);
+    expect(song.diagnostics.map((item) => item.message)).toContain('Tom sugerido: Gm — confirme.');
+  });
+
+  it('não substitui tom explicitamente informado por sugestão', () => {
+    const song = parseSongText('Tom: A\nGm7\nGm7  Dm7');
+
+    expect(song.originalKey).toBe('A');
+    expect(song.metadata.originalKeyInferred).toBe(false);
+    expect(song.diagnostics.some((item) => item.code === 'KEY_INFERRED')).toBe(false);
+  });
+
   it('transpõe o modelo sem alterar a letra, as posições ou o tom original', () => {
     const song = parseSongText('Tom: A\nA7M        E/G#\nMinha letra');
     const transposed = transposeParsedSong(song, 2);

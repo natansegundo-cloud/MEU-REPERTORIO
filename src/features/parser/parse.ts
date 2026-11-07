@@ -2,6 +2,7 @@ import { extractExplicitMetadata } from './metadata';
 import { normalizeImportedText, type NormalizedLine } from './normalize';
 import { isBodyMarker, recognizeLine, type RecognizedLine } from './recognize';
 import type { ParsedSong, ParsedSongLine, ParsedSongMetadata, ParserDiagnostic } from './types';
+import { parseChord } from '@/features/transpose';
 
 function diagnostic(
   severity: ParserDiagnostic['severity'],
@@ -30,18 +31,37 @@ function withLineContext(
 }
 
 function createLine(recognized: RecognizedLine): ParsedSongLine {
+  const outputText = recognized.outputText ?? recognized.line.text;
   return {
     kind: recognized.kind,
     lineNumber: recognized.line.lineNumber,
     sourceLineNumbers: [recognized.line.lineNumber],
-    sourceText: recognized.line.text,
-    sourceTexts: [recognized.line.text],
+    sourceText: outputText,
+    sourceTexts: [outputText],
     text: recognized.text,
     chordText: recognized.chordText,
     lyricText: recognized.text,
-    sectionLabel: recognized.label,
+    sectionLabel: recognized.kind === 'section' ? recognized.label : null,
     chords: recognized.chords,
-    reconstructedText: recognized.line.text,
+    reconstructedText: outputText,
+  };
+}
+
+function createPrefixedSectionLine(recognized: RecognizedLine): ParsedSongLine {
+  const label = recognized.label ?? '';
+  const sourceText = `[${label}]`;
+  return {
+    kind: 'section',
+    lineNumber: recognized.line.lineNumber,
+    sourceLineNumbers: [recognized.line.lineNumber],
+    sourceText,
+    sourceTexts: [sourceText],
+    text: null,
+    chordText: null,
+    lyricText: null,
+    sectionLabel: label,
+    chords: [],
+    reconstructedText: sourceText,
   };
 }
 
@@ -65,7 +85,15 @@ function combineLines(recognized: readonly RecognizedLine[]): ParsedSongLine[] {
   const result: ParsedSongLine[] = [];
 
   for (let index = 0; index < recognized.length; index += 1) {
-    const current = createLine(recognized[index] as RecognizedLine);
+    const recognizedCurrent = recognized[index] as RecognizedLine;
+    if (recognizedCurrent.kind === 'chords' && recognizedCurrent.label !== null) {
+      result.push(createPrefixedSectionLine(recognizedCurrent));
+    }
+    const current = createLine(
+      recognizedCurrent.kind === 'chords' && recognizedCurrent.label !== null
+        ? { ...recognizedCurrent, label: null }
+        : recognizedCurrent,
+    );
     const next = recognized[index + 1];
 
     if (current.kind === 'chords' && next && next.kind === 'lyric') {
@@ -122,15 +150,31 @@ function createMetadata(
   extracted: ReturnType<typeof extractExplicitMetadata>,
   title: string | null,
   artist: string | null,
+  originalKey: string | null,
+  currentKey: string | null,
+  originalKeyInferred: boolean,
 ): ParsedSongMetadata {
   return {
     title,
     artist,
-    originalKey: extracted.originalKey,
-    currentKey: extracted.currentKey,
+    originalKey,
+    currentKey,
     capo: extracted.capo,
     extraLines: extracted.extraLines,
+    originalKeyInferred,
   };
+}
+
+function inferKey(lines: readonly ParsedSongLine[]): string | null {
+  const chords = lines.flatMap((line) => line.chords);
+  const first = chords[0];
+  const last = chords.at(-1);
+  for (const placement of [first, last]) {
+    if (!placement) continue;
+    const parsed = parseChord(placement.symbol);
+    if (parsed) return `${parsed.root.name}${parsed.quality.kind === 'minor' ? 'm' : ''}`;
+  }
+  return null;
 }
 
 export function parseSongText(input: string): ParsedSong {
@@ -180,7 +224,15 @@ export function parseSongText(input: string): ParsedSong {
   if (lines.every((line) => line.kind === 'blank')) {
     diagnostics.push(diagnostic('error', 'NO_CONTENT', 'Nenhum conteúdo musical foi encontrado.'));
   }
-  if (extracted.originalKey === null) {
+  const inferredKey = extracted.originalKey === null ? inferKey(lines) : null;
+  const originalKey = extracted.originalKey ?? inferredKey;
+  const currentKey = extracted.currentKey ?? inferredKey;
+  const originalKeyInferred = extracted.originalKey === null && inferredKey !== null;
+  if (originalKeyInferred) {
+    diagnostics.push(
+      diagnostic('info', 'KEY_INFERRED', `Tom sugerido: ${inferredKey} — confirme.`),
+    );
+  } else if (extracted.originalKey === null) {
     diagnostics.push(diagnostic('info', 'KEY_NOT_PROVIDED', 'O tom original não foi informado.'));
   }
   if (chordCount === 0) {
@@ -189,7 +241,14 @@ export function parseSongText(input: string): ParsedSong {
     );
   }
 
-  const metadata = createMetadata(extracted, header.title, header.artist);
+  const metadata = createMetadata(
+    extracted,
+    header.title,
+    header.artist,
+    originalKey,
+    currentKey,
+    originalKeyInferred,
+  );
   const errorCount = diagnostics.filter((item) => item.severity === 'error').length;
   const warningCount = diagnostics.filter((item) => item.severity === 'warning').length;
 

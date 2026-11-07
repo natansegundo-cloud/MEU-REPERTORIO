@@ -1,4 +1,4 @@
-import { normalizeChordSymbol, parseChord } from '@/features/transpose';
+import { parseChord } from '@/features/transpose';
 
 import { codePointLength, visualWidth } from './normalize';
 import type { ParsedChordPlacement, ParserDiagnostic } from './types';
@@ -12,6 +12,7 @@ export interface RecognizedLine {
   readonly chordText: string | null;
   readonly chords: readonly ParsedChordPlacement[];
   readonly diagnostics: readonly ParserDiagnostic[];
+  readonly outputText?: string;
 }
 
 interface ChordCandidate {
@@ -65,8 +66,7 @@ function candidateFromToken(
   allowBareRoot = false,
 ): ChordCandidate | null {
   const rawSymbol = unwrapToken(token);
-  const normalized = normalizeChordSymbol(rawSymbol);
-  const parsed = normalized ? parseChord(normalized) : null;
+  const parsed = parseChordCandidate(rawSymbol);
   if (!parsed) return null;
 
   if (
@@ -80,6 +80,15 @@ function candidateFromToken(
   }
 
   return { symbol: parsed.symbol, rawSymbol, start, end, inline };
+}
+
+function parseChordCandidate(value: string): ReturnType<typeof parseChord> {
+  const parsed = parseChord(value);
+  if (parsed) return parsed;
+
+  const repaired = value.replace(/\/(?=[^()]*\))/gu, ',');
+  const repairedParsed = parseChord(repaired);
+  return repairedParsed ? { ...repairedParsed, original: value, symbol: value } : null;
 }
 
 function isRhythmToken(value: string): boolean {
@@ -119,6 +128,40 @@ function chordLineCandidates(line: string): ChordCandidate[] | null {
   return candidates.length > 0 ? candidates : null;
 }
 
+function isBareRoot(candidate: ChordCandidate): boolean {
+  const parsed = parseChordCandidate(candidate.rawSymbol);
+  return Boolean(
+    parsed && parsed.root.accidental === null && parsed.suffix === '' && parsed.bass === null,
+  );
+}
+
+function prefixedChordLine(line: string): {
+  label: string;
+  chordText: string;
+  candidates: ChordCandidate[];
+} | null {
+  const match = /^(?:\s*)\[([^\]\r\n]+)\](.*)$/u.exec(line);
+  if (!match) return null;
+
+  const label = (match[1] ?? '').trim();
+  const rest = match[2] ?? '';
+  if (!label || parseChord(label)) return null;
+
+  const candidates = chordLineCandidates(rest);
+  if (!candidates) return null;
+
+  const restStart = line.length - rest.length;
+  return {
+    label,
+    chordText: rest,
+    candidates: candidates.map((candidate) => ({
+      ...candidate,
+      start: candidate.start + restStart,
+      end: candidate.end + restStart,
+    })),
+  };
+}
+
 function placement(
   line: string,
   candidate: ChordCandidate,
@@ -145,12 +188,10 @@ function inlineCandidates(line: string): {
   const candidates: ChordCandidate[] = [];
   const diagnostics: ParserDiagnostic[] = [];
   const bracketPattern = /\[([^\]\r\n]+)\]/gu;
-  const bracketRanges: Array<[number, number]> = [];
 
   for (const match of line.matchAll(bracketPattern)) {
     const start = match.index ?? 0;
     const end = start + match[0].length;
-    bracketRanges.push([start, end]);
     const inner = match[1] ?? '';
     const candidate = candidateFromToken(inner, start, end, true, true);
     if (candidate) {
@@ -165,18 +206,6 @@ function inlineCandidates(line: string): {
         sourceText: line,
       });
     }
-  }
-
-  for (const match of line.matchAll(/\S+/gu)) {
-    const token = match[0] ?? '';
-    const start = match.index ?? 0;
-    const end = start + token.length;
-    if (bracketRanges.some(([rangeStart, rangeEnd]) => start < rangeEnd && end > rangeStart)) {
-      continue;
-    }
-
-    const candidate = candidateFromToken(token, start, end, true);
-    if (candidate) candidates.push(candidate);
   }
 
   return { candidates: candidates.sort((left, right) => left.start - right.start), diagnostics };
@@ -206,6 +235,7 @@ export function isBodyMarker(line: NormalizedLine): boolean {
   if (!line.text.trim()) return false;
   return Boolean(
     isSection(line.text) ||
+    prefixedChordLine(line.text) ||
     chordLineCandidates(line.text) ||
     inlineCandidates(line.text).candidates.length,
   );
@@ -234,6 +264,22 @@ export function recognizeLine(line: NormalizedLine): RecognizedLine {
       chordText: null,
       chords: [],
       diagnostics: [],
+    };
+  }
+
+  const prefixed = prefixedChordLine(line.text);
+  if (prefixed) {
+    return {
+      line,
+      kind: 'chords',
+      text: null,
+      label: prefixed.label,
+      chordText: prefixed.chordText,
+      chords: prefixed.candidates.map((candidate) =>
+        placement(line.text, candidate, line.text.slice(0, candidate.start)),
+      ),
+      diagnostics: [],
+      outputText: prefixed.chordText,
     };
   }
 
@@ -283,17 +329,16 @@ export function recognizeLine(line: NormalizedLine): RecognizedLine {
   }
 
   const possibleChordWords = tokenCandidates(line.text, false);
-  const diagnostics =
-    possibleChordWords.length > 0
-      ? [
-          diagnostic(
-            'warning',
-            'UNRECOGNIZED_CHORD',
-            'A linha contém tokens com aparência musical, mas não pôde ser classificada com segurança.',
-            line,
-          ),
-        ]
-      : inline.diagnostics;
+  const diagnostics = possibleChordWords.some((candidate) => !isBareRoot(candidate))
+    ? [
+        diagnostic(
+          'warning',
+          'UNRECOGNIZED_CHORD',
+          'A linha contém tokens com aparência musical, mas não pôde ser classificada com segurança.',
+          line,
+        ),
+      ]
+    : inline.diagnostics;
 
   return {
     line,
