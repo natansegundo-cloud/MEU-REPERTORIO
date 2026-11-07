@@ -1,15 +1,20 @@
 import { fileURLToPath, URL } from 'node:url';
+import { readFileSync } from 'node:fs';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const packageJson = JSON.parse(
+  readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'),
+) as { version: string };
+
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: [
         'brand/icon.svg',
         'brand/icon-192.png',
@@ -51,6 +56,17 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores: ['**/assets/pdf-*.js', '**/assets/pdf.worker*.mjs'],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/pdf(?:\.worker(?:\.min)?)?-[^/]+\.(?:js|mjs)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'meu-repertorio-pdf-runtime',
+              expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+        ],
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
@@ -63,6 +79,23 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/lucide-react')) return 'icons';
+          if (id.includes('node_modules/react')) return 'react';
+          if (id.includes('node_modules/dexie')) return 'dexie';
+          if (id.includes('/src/features/show-mode/')) return 'show-mode';
+          if (id.includes('/src/features/transpose/')) return 'music-engine';
+          return undefined;
+        },
+      },
     },
   },
   test: {

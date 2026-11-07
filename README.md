@@ -1,12 +1,14 @@
 # Meu Repertorio V2
 
 Aplicativo pessoal para organizar, estudar e executar repertorios musicais no
-violao. A V2 e uma PWA React/Vite offline-first e a versao antiga na raiz nao e
-alterada.
+violao. A V2 e uma PWA React/Vite offline-first; a versao antiga que ficava na
+pasta pai foi removida no fechamento da Etapa 10.
+
+Versao de lancamento: **2.0.0**.
 
 ## Estado atual
 
-Etapas 1 a 8 implementadas na V2:
+Etapas 1 a 9 implementadas na V2:
 
 - React 19, TypeScript strict, Vite, Dexie, Vitest, Testing Library e Playwright;
 - motor musical, parser, biblioteca, editor, repertorios e modo show;
@@ -16,6 +18,10 @@ Etapas 1 a 8 implementadas na V2:
   tombstones, revisoes e fila de sincronizacoes;
 - area de Nuvem com magic link, estados offline/erro/sincronizado e protecao
   contra mistura de contas;
+- backup JSON local com restauracao por mesclagem ou substituicao protegida,
+  migracao somente-leitura da V1, importacao TXT/PDF e favoritos locais;
+- importacao PDF sob demanda, com limite de 20 MB, extracao por coordenadas e
+  cache de runtime sem precache do PDF.js;
 - SQL novo em `supabase/migrations/` e instrucoes de aplicacao manual em
   `supabase/README.md`.
 
@@ -62,3 +68,35 @@ projeto. A aplicacao deve ser manual, primeiro em um projeto de teste, conforme
 
 Todos os testes usam IndexedDB falso e backend em memoria; nenhum teste acessa
 o Supabase real ou depende de rede.
+
+## Lançamento 2.0.0
+
+- A V1 foi removida da pasta pai por decisão explícita do usuário. A V2 é o
+  único aplicativo mantido neste workspace.
+- O aplicativo solicita persistência do armazenamento quando o navegador
+  oferece essa API e exibe o estado em Ajustes > Dados.
+- Atualizações do PWA mostram `Nova versão disponível — atualizar`; a troca só
+  acontece após a confirmação do usuário e não apaga o IndexedDB.
+- O fallback global informa falhas inesperadas sem ocultar que os dados locais
+  permanecem preservados.
+- O deploy da Vercel usa cabeçalhos de segurança em `vercel.json`.
+
+### Auditoria de dependências
+
+Em 2026-11-07, `npm audit --omit=dev` encontrou **0 vulnerabilidades de
+produção**. A auditoria completa encontrou **15 vulnerabilidades somente em
+dependências de desenvolvimento** (2 baixas e 13 moderadas, sem altas ou
+críticas). As correções automáticas propostas envolvem downgrade ou mudança de
+versão major, por isso nenhuma foi aplicada e `npm audit fix` não foi usado.
+
+O aplicativo não exige variáveis para funcionar offline. Quando a nuvem for
+habilitada, use somente `VITE_SUPABASE_URL` e
+`VITE_SUPABASE_PUBLISHABLE_KEY`; nenhum segredo ou `service_role` deve ser
+colocado no navegador.
+
+## Backup e migracao
+
+Os detalhes do formato do backup e da migracao da V1 estao em
+[`docs/MIGRACAO_V1.md`](docs/MIGRACAO_V1.md). A restauracao valida o arquivo
+antes de escrever, executa uma unica transacao Dexie e nunca importa tokens,
+sessoes, e-mails, chaves, cursores ou fila de sincronizacao.

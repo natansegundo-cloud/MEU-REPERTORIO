@@ -1,7 +1,7 @@
 {
   "name": "meu-repertorio-v2",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.0.0",
   "type": "module",
   "description": "Aplicativo pessoal para organizar, estudar e executar repertórios musicais.",
   "engines": {
@@ -28,6 +28,7 @@
     "@supabase/supabase-js": "^2.81.1",
     "dexie": "4.4.7",
     "lucide-react": "1.70.0",
+    "pdfjs-dist": "^6.5.438",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
