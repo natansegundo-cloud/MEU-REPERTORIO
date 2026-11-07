@@ -1,0 +1,114 @@
+.page {
+  display: grid;
+  gap: var(--space-6);
+}
+.panel {
+  display: grid;
+  gap: var(--space-4);
+  padding: clamp(var(--space-5), 4vw, var(--space-7));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+.panelHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.panelHeading h2 {
+  font-size: var(--text-xl);
+}
+.panelHeading p,
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.actions,
+.strategy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+.preview {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+.preview h3 {
+  font-size: var(--text-lg);
+}
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-2);
+}
+.summary div {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+.summary span {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+.warningList,
+.errorList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+}
+.errorList,
+.error {
+  color: var(--color-danger);
+}
+.check,
+.confirm {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.confirm input {
+  min-height: 2.75rem;
+  max-width: 18rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+.error,
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+.error {
+  background: var(--color-danger-soft);
+}
+.notice {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.version,
+.storage {
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+.version {
+  margin-top: var(--space-4);
+}

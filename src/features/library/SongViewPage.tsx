@@ -1,16 +1,17 @@
-import { ArrowLeft, Edit3, Music2, Minus, Plus, Save } from 'lucide-react';
+import { ArrowLeft, Edit3, Heart, Music2, Minus, Plus, Save } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ChordDiagram } from '@/components/music';
 import { Button } from '@/components/ui/Button';
 import { transposeParsedSong } from '@/features/parser';
 import { transposeTonality } from '@/features/transpose';
-import { getPreference, setPreference, updateSongPreferredKey } from '@/services';
+import { getPreference, setPreference, toggleFavorite, updateSongPreferredKey } from '@/services';
 
 import { SongSheet } from '@/features/songs';
 import { baseSongStructure, keyShift } from '@/features/songs/display';
 import { useSong } from './useSongs';
 import { RepertoryPicker } from './RepertoryPicker';
+import { useIsFavorite } from './useFavorites';
 import styles from './SongViewPage.module.css';
 
 interface SongViewPageProps {
@@ -26,6 +27,7 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
   const [toneError, setToneError] = useState<string | null>(null);
   const [diagramsEnabled, setDiagramsEnabled] = useState(false);
   const [diagramSymbol, setDiagramSymbol] = useState<string | null>(null);
+  const favorite = useIsFavorite(songId);
 
   useEffect(() => {
     void getPreference('reading.diagrams', false).then(setDiagramsEnabled);
@@ -93,6 +95,14 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
         </div>
         <div className={styles.headerActions}>
           <RepertoryPicker songId={song.id} />
+          <Button
+            variant="secondary"
+            aria-pressed={favorite}
+            onClick={() => void toggleFavorite(song.id)}
+          >
+            <Heart size={17} fill={favorite ? 'currentColor' : 'none'} />
+            {favorite ? 'Favorita' : 'Favoritar'}
+          </Button>
           <Button variant="secondary" onClick={onEdit}>
             <Edit3 size={17} />
             Editar música

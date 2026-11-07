@@ -1,12 +1,13 @@
-import { Library, Plus, Search } from 'lucide-react';
+import { Heart, Library, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/Button';
-import { softDeleteSong } from '@/services';
+import { softDeleteSong, toggleFavorite } from '@/services';
 
 import { useSongs } from './useSongs';
 import { SongCard } from './SongCard';
+import { useFavoriteIds } from './useFavorites';
 import { LibraryTabs } from './LibraryTabs';
 import styles from './LibraryPage.module.css';
 
@@ -26,7 +27,10 @@ export function LibraryPage({
   onOpenRepertories,
 }: LibraryPageProps) {
   const [query, setQuery] = useState('');
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
   const { data: songs, loading, error } = useSongs(query);
+  const favoriteIds = useFavoriteIds();
+  const visibleSongs = onlyFavorites ? songs.filter((song) => favoriteIds.has(song.id)) : songs;
 
   async function handleDelete(id: string): Promise<void> {
     const song = songs.find((item) => item.id === id);
@@ -71,9 +75,19 @@ export function LibraryPage({
             placeholder="Pesquisar por título, artista ou tom"
           />
         </label>
-        <span className={styles.count}>
-          {songs.length} {songs.length === 1 ? 'música' : 'músicas'}
-        </span>
+        <div className={styles.filters}>
+          <button
+            className={styles.favoriteFilter}
+            type="button"
+            aria-pressed={onlyFavorites}
+            onClick={() => setOnlyFavorites((value) => !value)}
+          >
+            <Heart size={16} fill={onlyFavorites ? 'currentColor' : 'none'} /> Favoritas
+          </button>
+          <span className={styles.count}>
+            {visibleSongs.length} {visibleSongs.length === 1 ? 'música' : 'músicas'}
+          </span>
+        </div>
       </section>
 
       {notice ? (
@@ -85,9 +99,11 @@ export function LibraryPage({
       {loading ? <p className={styles.feedback}>Carregando biblioteca…</p> : null}
       {error ? <p className={styles.error}>Não foi possível carregar as músicas locais.</p> : null}
 
-      {!loading && !error && songs.length === 0 ? (
+      {!loading && !error && visibleSongs.length === 0 ? (
         query ? (
           <p className={styles.feedback}>Nenhuma música corresponde à sua pesquisa.</p>
+        ) : onlyFavorites ? (
+          <p className={styles.feedback}>Nenhuma música foi marcada como favorita.</p>
         ) : (
           <EmptyState
             icon={Library}
@@ -98,14 +114,16 @@ export function LibraryPage({
         )
       ) : null}
 
-      {!loading && !error && songs.length > 0 ? (
+      {!loading && !error && visibleSongs.length > 0 ? (
         <div className={styles.list} aria-label="Músicas cadastradas">
-          {songs.map((song) => (
+          {visibleSongs.map((song) => (
             <SongCard
               key={song.id}
               song={song}
               onOpen={onOpenSong}
               onDelete={(id) => void handleDelete(id)}
+              favorite={favoriteIds.has(song.id)}
+              onToggleFavorite={(id) => void toggleFavorite(id)}
             />
           ))}
         </div>

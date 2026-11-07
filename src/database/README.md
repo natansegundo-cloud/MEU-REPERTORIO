@@ -24,6 +24,10 @@ registros ou reprocessa texto sem necessidade.
 - v5: adiciona `syncPending` e marca registros anteriores como pendentes para a
   primeira sincronizacao.
 
+`legacyId` e um identificador opcional usado pela migracao da V1; ele nao muda
+o schema indexado do Dexie. Favoritos continuam locais e entram no backup JSON,
+mas nao entram na sincronizacao com a nuvem.
+
 Detalhes e o teste de preservacao da v5 estao em
 [`MIGRATION_V5.md`](MIGRATION_V5.md) e `migrations.test.ts`.
 

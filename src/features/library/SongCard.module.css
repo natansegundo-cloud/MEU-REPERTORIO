@@ -87,6 +87,22 @@
   color: var(--color-text-subtle);
 }
 
+.favorite {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-accent);
+}
+
+.favorite:hover {
+  background: var(--color-accent-soft);
+}
+
 .delete:hover {
   background: var(--color-danger-soft);
   color: var(--color-danger);

@@ -1,4 +1,4 @@
-import { Music2, Trash2 } from 'lucide-react';
+import { Heart, Music2, Trash2 } from 'lucide-react';
 
 import type { Song } from '@/types';
 
@@ -8,9 +8,17 @@ interface SongCardProps {
   readonly song: Song;
   readonly onOpen: (id: string) => void;
   readonly onDelete: (id: string) => void;
+  readonly favorite?: boolean;
+  readonly onToggleFavorite?: (id: string) => void;
 }
 
-export function SongCard({ song, onOpen, onDelete }: SongCardProps) {
+export function SongCard({
+  song,
+  onOpen,
+  onDelete,
+  favorite = false,
+  onToggleFavorite,
+}: SongCardProps) {
   return (
     <article className={styles.card} data-testid="song-card">
       <button className={styles.mainAction} type="button" onClick={() => onOpen(song.id)}>
@@ -23,6 +31,17 @@ export function SongCard({ song, onOpen, onDelete }: SongCardProps) {
         </span>
         <span className={styles.key}>{song.currentKey ?? song.originalKey ?? 'Sem tom'}</span>
       </button>
+      {onToggleFavorite ? (
+        <button
+          className={styles.favorite}
+          type="button"
+          aria-label={favorite ? `Remover ${song.title} dos favoritos` : `Favoritar ${song.title}`}
+          aria-pressed={favorite}
+          onClick={() => onToggleFavorite(song.id)}
+        >
+          <Heart size={17} fill={favorite ? 'currentColor' : 'none'} strokeWidth={1.8} />
+        </button>
+      ) : null}
       <button
         className={styles.delete}
         type="button"

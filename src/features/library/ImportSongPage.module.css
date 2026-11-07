@@ -77,6 +77,10 @@
   font-weight: var(--weight-regular);
 }
 
+.inferredKey {
+  color: var(--color-warning);
+}
+
 .metadata input,
 .contentField textarea {
   width: 100%;
@@ -115,6 +119,27 @@
   gap: var(--space-2);
 }
 
+.filePicker {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.filePicker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
 .diagnostics,
 .success {
   display: flex;
@@ -128,6 +153,54 @@
   border: 1px solid var(--color-danger);
   background: var(--color-danger-soft);
   color: var(--color-danger);
+}
+
+.warningSummary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-height: 10rem;
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.warningGroups {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.warningGroups details {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.warningGroups summary {
+  cursor: pointer;
+  font-weight: var(--weight-semibold);
+}
+
+.warningGroups p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
+.warningGroups small {
+  color: var(--color-text-subtle);
+}
+
+.showWarnings {
+  margin-top: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
 
 .diagnostics ul {

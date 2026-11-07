@@ -1,7 +1,9 @@
-import { ArrowLeft, ClipboardPaste, Info, TriangleAlert } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { ArrowLeft, ClipboardPaste, FileUp, Info, TriangleAlert } from 'lucide-react';
+import { useMemo, useState, type FormEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { parseSongText } from '@/features/parser';
+import { extractPdfText, readTextFile } from '@/import';
 import { importSong, SongImportError } from '@/services';
 import type { ParserDiagnostic, Song } from '@/types';
 
@@ -17,13 +19,130 @@ function diagnosticLabel(diagnostic: ParserDiagnostic): string {
   return `${location}${diagnostic.message}`;
 }
 
+interface WarningGroup {
+  readonly code: ParserDiagnostic['code'];
+  readonly message: string;
+  readonly lineNumbers: readonly number[];
+}
+
+function groupWarnings(diagnostics: readonly ParserDiagnostic[]): WarningGroup[] {
+  const groups = new Map<
+    string,
+    { code: ParserDiagnostic['code']; message: string; lineNumbers: Set<number> }
+  >();
+  for (const item of diagnostics) {
+    if (item.severity !== 'warning') continue;
+    const key = `${item.code}:${item.message}`;
+    const group = groups.get(key) ?? {
+      code: item.code,
+      message: item.message,
+      lineNumbers: new Set<number>(),
+    };
+    if (item.lineNumber !== null) group.lineNumbers.add(item.lineNumber);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map((group) => ({
+    code: group.code,
+    message: group.message,
+    lineNumbers: [...group.lineNumbers].sort((left, right) => left - right),
+  }));
+}
+
+function replaceOrAddKey(input: string, key: string): string {
+  const keyLine = `Tom: ${key}`;
+  if (/^\s*Tom\s*:/imu.test(input)) {
+    return input.replace(/^\s*Tom\s*:\s*.*$/imu, keyLine);
+  }
+  return `${keyLine}\n${input}`;
+}
+
+function WarningSummary({ diagnostics }: { readonly diagnostics: readonly ParserDiagnostic[] }) {
+  const groups = useMemo(() => groupWarnings(diagnostics), [diagnostics]);
+  const [showAll, setShowAll] = useState(false);
+  if (groups.length === 0) return null;
+
+  const visibleGroups = showAll ? groups : groups.slice(0, 3);
+  return (
+    <div className={styles.warningSummary} role="status" aria-label="Avisos da importação">
+      <TriangleAlert size={18} aria-hidden="true" />
+      <div>
+        <strong>Avisos para revisar</strong>
+        <div className={styles.warningGroups}>
+          {visibleGroups.map((group) => (
+            <details key={`${group.code}-${group.message}`}>
+              <summary>
+                {group.lineNumbers.length > 1
+                  ? `Mesmo aviso em ${group.lineNumbers.length} linhas`
+                  : diagnosticLabel({
+                      ...group,
+                      lineNumber: group.lineNumbers[0] ?? null,
+                      column: null,
+                      severity: 'warning',
+                      sourceText: null,
+                    })}
+              </summary>
+              <p>{group.message}</p>
+              {group.lineNumbers.length > 0 ? (
+                <small>Linhas: {group.lineNumbers.join(', ')}</small>
+              ) : null}
+            </details>
+          ))}
+        </div>
+        {groups.length > 3 ? (
+          <button
+            className={styles.showWarnings}
+            type="button"
+            onClick={() => setShowAll((value) => !value)}
+          >
+            {showAll ? 'Ocultar avisos' : `Ver todos (${groups.length})`}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
+  const [keyDraft, setKeyDraft] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorDiagnostics, setErrorDiagnostics] = useState<readonly ParserDiagnostic[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [isReadingFile, setIsReadingFile] = useState(false);
+  const parsedPreview = useMemo(() => (content.trim() ? parseSongText(content) : null), [content]);
+
+  async function handleFile(file: File): Promise<void> {
+    setIsReadingFile(true);
+    setErrorDiagnostics([]);
+    setFeedback(null);
+    try {
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/iu.test(file.name);
+      const text = isPdf ? await extractPdfText(file) : await readTextFile(file);
+      setContent(text);
+      setKeyDraft(null);
+      if (!title.trim()) setTitle(file.name.replace(/\.(?:txt|pdf)$/iu, ''));
+      setFeedback(
+        isPdf
+          ? 'Texto do PDF extraído. Revise antes de salvar.'
+          : 'Texto carregado. Revise antes de salvar.',
+      );
+    } catch (cause: unknown) {
+      setErrorDiagnostics([
+        {
+          severity: 'error',
+          code: 'PARTIAL_PARSE',
+          message: cause instanceof Error ? cause.message : 'Não foi possível ler o arquivo.',
+          lineNumber: null,
+          column: null,
+          sourceText: null,
+        },
+      ]);
+    } finally {
+      setIsReadingFile(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -34,7 +153,12 @@ export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
     setIsSubmitting(true);
 
     try {
-      const song = await importSong(content, { title, artist });
+      const parsedKey = parsedPreview?.originalKey ?? null;
+      const importContent =
+        keyDraft && keyDraft.trim() && keyDraft.trim() !== parsedKey
+          ? replaceOrAddKey(content, keyDraft.trim())
+          : content;
+      const song = await importSong(importContent, { title, artist });
       const warnings = song.structure.diagnostics.filter((item) => item.severity === 'warning');
       setFeedback(
         warnings.length > 0
@@ -102,6 +226,21 @@ export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
               placeholder="Ex.: Natiruts"
             />
           </label>
+          <label>
+            <span>
+              Tom original <small>(opcional)</small>
+            </span>
+            <input
+              value={keyDraft ?? parsedPreview?.originalKey ?? ''}
+              onChange={(event) => setKeyDraft(event.target.value)}
+              placeholder="Ex.: Gm"
+            />
+            {parsedPreview?.metadata.originalKeyInferred ? (
+              <small className={styles.inferredKey}>
+                Tom sugerido: {parsedPreview.originalKey} — confirme
+              </small>
+            ) : null}
+          </label>
         </div>
 
         <label className={styles.contentField}>
@@ -112,9 +251,26 @@ export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
           <textarea
             required
             value={content}
-            onChange={(event) => setContent(event.target.value)}
+            onChange={(event) => {
+              setContent(event.target.value);
+              setKeyDraft(null);
+            }}
             placeholder={'Cole aqui a cifra completa…\n\nTom: A\nA7M        E/G#\nMinha letra'}
             rows={16}
+          />
+        </label>
+        <WarningSummary diagnostics={parsedPreview?.diagnostics ?? []} />
+        <label className={styles.filePicker}>
+          <FileUp size={17} />
+          <span>{isReadingFile ? 'Lendo arquivo…' : 'Carregar TXT ou PDF'}</span>
+          <input
+            type="file"
+            accept=".txt,.pdf,text/plain,application/pdf"
+            disabled={isReadingFile}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void handleFile(file);
+            }}
           />
         </label>
 

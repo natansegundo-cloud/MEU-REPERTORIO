@@ -3,10 +3,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { UpdateNotice } from '@/components/system/UpdateNotice';
 import { ImportSongPage, LibraryPage, SongEditorPage, SongViewPage } from '@/features/library';
 import { RepertoriesPage, RepertoryEditorPage } from '@/features/repertories';
 import { ShowModePage } from '@/features/show-mode';
+import { FavoritesPage } from '@/features/favorites/FavoritesPage';
 import { CloudPage } from '@/features/settings/CloudPage';
+import { DataPage } from '@/features/settings/DataPage';
 import { useCloudSync } from '@/sync';
 import type { Song } from '@/types';
 
@@ -41,9 +44,8 @@ const PLACEHOLDERS: Record<Exclude<SectionId, 'library'>, PlaceholderContent> = 
       'A estrutura de dados para repertórios e ordenação já foi definida. A interface será construída sobre essa base.',
   },
   favorites: {
-    title: 'Favoritos na próxima etapa',
-    description:
-      'A tabela de favoritos já faz parte do schema inicial do banco local e será conectada à interface em seguida.',
+    title: 'Favoritos',
+    description: 'Acesso rápido às músicas marcadas neste dispositivo.',
   },
   settings: {
     title: 'Ajustes na próxima etapa',
@@ -62,6 +64,7 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const [editorDirty, setEditorDirty] = useState(false);
   const [showRoute, setShowRoute] = useState<ShowRoute | null>(() => readShowRoute());
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const activeItem = NAVIGATION_BY_ID[activeSection];
   const ActiveIcon = activeItem.icon;
@@ -76,6 +79,12 @@ export function App() {
       window.removeEventListener('popstate', handleRouteChange);
       window.removeEventListener('hashchange', handleRouteChange);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleUpdate = (): void => setUpdateAvailable(true);
+    window.addEventListener('pwa:need-refresh', handleUpdate);
+    return () => window.removeEventListener('pwa:need-refresh', handleUpdate);
   }, []);
 
   function openShow(repertoryId: string, itemId?: string): void {
@@ -192,10 +201,25 @@ export function App() {
         onOpenShow={(id) => openShow(id)}
       />
     );
+  } else if (activeSection === 'favorites') {
+    content = (
+      <FavoritesPage
+        onOpenSong={(id) => {
+          setActiveSection('library');
+          setSelectedSongId(id);
+          setLibraryScreen('song');
+        }}
+      />
+    );
   } else if (activeSection === 'settings') {
-    content = <CloudPage />;
+    content = (
+      <>
+        <DataPage />
+        <CloudPage />
+      </>
+    );
   } else {
-    const placeholder = PLACEHOLDERS[activeSection];
+    const placeholder = PLACEHOLDERS[activeSection as keyof typeof PLACEHOLDERS];
     content = (
       <div className={styles.page}>
         <PageHeader
@@ -225,8 +249,11 @@ export function App() {
   }
 
   return (
-    <AppShell activeSection={activeSection} onSectionChange={handleSectionChange}>
-      {content}
-    </AppShell>
+    <>
+      {updateAvailable ? <UpdateNotice /> : null}
+      <AppShell activeSection={activeSection} onSectionChange={handleSectionChange}>
+        {content}
+      </AppShell>
+    </>
   );
 }

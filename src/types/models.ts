@@ -27,6 +27,8 @@ export interface BaseEntity {
   syncPending: boolean;
   /** Falha do ultimo envio desta entidade; mantida para exibicao e nova tentativa. */
   syncError?: string | null;
+  /** Identificador preservado ao importar dados de outra versao do app. */
+  legacyId?: string;
 }
 
 export interface Song extends BaseEntity {
