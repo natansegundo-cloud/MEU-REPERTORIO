@@ -1,0 +1,109 @@
+.card {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.mainAction {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-4) var(--space-5);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.title,
+.artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title {
+  font-size: var(--text-base);
+}
+
+.artist {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.key {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.delete {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-right: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-subtle);
+}
+
+.delete:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+@media (max-width: 520px) {
+  .mainAction {
+    gap: var(--space-3);
+    padding-inline: var(--space-3);
+  }
+
+  .icon {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .key {
+    display: none;
+  }
+}

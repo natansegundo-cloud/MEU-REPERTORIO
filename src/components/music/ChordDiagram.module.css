@@ -1,0 +1,109 @@
+.panel {
+  display: grid;
+  gap: var(--space-3);
+  width: min(100%, 22rem);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-sm);
+}
+
+.panelHeader,
+.diagramRow,
+.variations {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.panelHeader strong {
+  display: block;
+  color: var(--color-accent-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+}
+
+.positionLabel,
+.empty,
+.fingerList,
+.variations {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.positionLabel {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+.iconButton,
+.variations button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.iconButton:hover,
+.variations button:hover:not(:disabled) {
+  color: var(--color-accent-strong);
+  border-color: var(--color-accent);
+}
+
+.diagram {
+  width: 9.5rem;
+  height: 8.9rem;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.nut {
+  stroke: var(--color-text);
+  stroke-width: 3;
+}
+
+.finger,
+.barre {
+  fill: var(--color-accent);
+  stroke: var(--color-accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.open {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.5;
+}
+
+.muted,
+.fretLabel {
+  fill: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.fingerList {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 4rem;
+}
+
+.variations {
+  justify-content: center;
+}
+
+.empty {
+  margin: 0;
+}

@@ -1,0 +1,302 @@
+.page {
+  min-height: 100dvh;
+  padding: var(--space-4) clamp(var(--space-4), 4vw, var(--space-10)) 7rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  touch-action: pan-y;
+}
+
+.topbar,
+.navigation,
+.trackMeta,
+.inlineControls,
+.sheetHeader {
+  display: flex;
+  align-items: center;
+}
+
+.topbar {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 3.25rem;
+  padding: var(--space-2) 0;
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.exit,
+.controlToggle,
+.sheetHeader button,
+.navigation button,
+.inlineControls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.exit:hover,
+.controlToggle:hover,
+.sheetHeader button:hover,
+.navigation button:hover:not(:disabled),
+.inlineControls button:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.trackMeta {
+  justify-content: center;
+  gap: var(--space-3);
+  min-width: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+.trackMeta strong {
+  max-width: min(32rem, 45vw);
+  overflow: hidden;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.songHeading {
+  display: grid;
+  gap: var(--space-1);
+  width: min(64rem, 100%);
+  margin: clamp(var(--space-5), 7vw, var(--space-12)) auto var(--space-5);
+}
+
+.songHeading p,
+.songHeading span,
+.kicker {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.songHeading h1 {
+  max-width: 58rem;
+  font-size: clamp(1.8rem, 1.2rem + 2vw, 3rem);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.04em;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  width: min(64rem, 100%);
+  margin: 0 auto var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.controlGroup {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.controlGroup small,
+.hint {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+.controlGroup input[type='range'] {
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+
+.inlineControls {
+  gap: var(--space-1);
+}
+
+.inlineControls button {
+  min-width: 2.25rem;
+  border-color: var(--color-border);
+  background: var(--color-bg);
+  font-size: var(--text-xs);
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  grid-column: 1 / -1;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.toast {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-success);
+  font-size: var(--text-sm);
+}
+
+.page :global(.song-sheet) {
+  margin: 0 auto;
+}
+
+.navigation {
+  position: fixed;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-3) max(var(--space-4), env(safe-area-inset-left))
+    max(var(--space-3), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-raised) 94%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.navigation button {
+  max-width: min(30vw, 14rem);
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navigation button:disabled {
+  opacity: 0.4;
+}
+
+.listButton {
+  color: var(--color-accent-strong) !important;
+}
+
+.confirmExit,
+.state,
+.emptyState {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  min-height: 100dvh;
+  align-content: center;
+  text-align: center;
+}
+
+.confirmExit {
+  display: flex;
+  justify-content: center;
+  min-height: auto;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-warning);
+}
+
+.emptyState p {
+  max-width: 32rem;
+  color: var(--color-text-muted);
+}
+
+.sheetBackdrop {
+  position: fixed;
+  z-index: 3;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  background: rgb(18 24 21 / 34%);
+}
+
+.trackSheet {
+  width: min(100%, 34rem);
+  max-height: min(78dvh, 38rem);
+  margin: 0 auto;
+  padding: var(--space-4);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-bottom: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--color-surface-raised);
+}
+
+.sheetHeader {
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.sheetHeader h2 {
+  font-size: var(--text-lg);
+}
+
+.trackSheet ol {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.trackSheet li button {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.trackSheet li button:hover,
+.activeTrack {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft) !important;
+}
+
+.trackSheet li button span:first-child,
+.trackSheet li button small {
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.trackSheet li button span:nth-child(2) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+  .switchRow,
+  .toast {
+    grid-column: auto;
+  }
+  .trackMeta {
+    gap: var(--space-1);
+    flex-direction: column;
+    align-items: center;
+  }
+  .trackMeta strong {
+    max-width: 42vw;
+  }
+  .navigation {
+    justify-content: space-between;
+  }
+  .navigation button {
+    max-width: 38vw;
+    padding: 0 var(--space-2);
+  }
+}

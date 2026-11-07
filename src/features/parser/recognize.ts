@@ -1,0 +1,307 @@
+import { normalizeChordSymbol, parseChord } from '@/features/transpose';
+
+import { codePointLength, visualWidth } from './normalize';
+import type { ParsedChordPlacement, ParserDiagnostic } from './types';
+import type { NormalizedLine } from './normalize';
+
+export interface RecognizedLine {
+  readonly line: NormalizedLine;
+  readonly kind: 'blank' | 'section' | 'lyric' | 'chords' | 'chord-lyric';
+  readonly text: string | null;
+  readonly label: string | null;
+  readonly chordText: string | null;
+  readonly chords: readonly ParsedChordPlacement[];
+  readonly diagnostics: readonly ParserDiagnostic[];
+}
+
+interface ChordCandidate {
+  readonly symbol: string;
+  readonly rawSymbol: string;
+  readonly start: number;
+  readonly end: number;
+  readonly inline: boolean;
+}
+
+function diagnostic(
+  severity: ParserDiagnostic['severity'],
+  code: ParserDiagnostic['code'],
+  message: string,
+  line: NormalizedLine,
+  column: number | null = null,
+): ParserDiagnostic {
+  return {
+    severity,
+    code,
+    message,
+    lineNumber: line.lineNumber,
+    column,
+    sourceText: line.text,
+  };
+}
+
+function unwrapToken(value: string): string {
+  let result = value.trim();
+  const wrappers: ReadonlyArray<[string, string]> = [
+    ['[', ']'],
+    ['{', '}'],
+    ['<', '>'],
+  ];
+
+  for (const [opening, closing] of wrappers) {
+    if (result.startsWith(opening) && result.endsWith(closing)) {
+      result = result.slice(1, -1).trim();
+      break;
+    }
+  }
+
+  return result.replace(/^[,.;:!?]+|[,.;:!?]+$/gu, '');
+}
+
+function candidateFromToken(
+  token: string,
+  start: number,
+  end: number,
+  inline: boolean,
+  allowBareRoot = false,
+): ChordCandidate | null {
+  const rawSymbol = unwrapToken(token);
+  const normalized = normalizeChordSymbol(rawSymbol);
+  const parsed = normalized ? parseChord(normalized) : null;
+  if (!parsed) return null;
+
+  if (
+    inline &&
+    !allowBareRoot &&
+    parsed.root.accidental === null &&
+    parsed.suffix === '' &&
+    !parsed.bass
+  ) {
+    return null;
+  }
+
+  return { symbol: parsed.symbol, rawSymbol, start, end, inline };
+}
+
+function isRhythmToken(value: string): boolean {
+  return /^(?:\|+|x\d*|X\d*|-+|–+|—+)$/u.test(value);
+}
+
+function tokenCandidates(line: string, inline: boolean): ChordCandidate[] {
+  const candidates: ChordCandidate[] = [];
+  const tokenPattern = /\S+/gu;
+
+  for (const match of line.matchAll(tokenPattern)) {
+    const token = match[0] ?? '';
+    const start = match.index ?? 0;
+    const end = start + token.length;
+    const candidate = candidateFromToken(token, start, end, inline);
+    if (candidate) candidates.push(candidate);
+  }
+
+  return candidates;
+}
+
+function chordLineCandidates(line: string): ChordCandidate[] | null {
+  const matches = [...line.matchAll(/\S+/gu)];
+  if (matches.length === 0) return null;
+
+  const candidates: ChordCandidate[] = [];
+  for (const match of matches) {
+    const token = match[0] ?? '';
+    if (isRhythmToken(token)) continue;
+
+    const start = match.index ?? 0;
+    const candidate = candidateFromToken(token, start, start + token.length, false);
+    if (!candidate) return null;
+    candidates.push(candidate);
+  }
+
+  return candidates.length > 0 ? candidates : null;
+}
+
+function placement(
+  line: string,
+  candidate: ChordCandidate,
+  lyricPrefix: string,
+): ParsedChordPlacement {
+  return {
+    position: codePointLength(lyricPrefix),
+    symbol: candidate.symbol,
+    rawSymbol: candidate.rawSymbol,
+    sourceStart: codePointLength(line.slice(0, candidate.start)),
+    sourceEnd: codePointLength(line.slice(0, candidate.end)),
+    sourceStartOffset: candidate.start,
+    sourceEndOffset: candidate.end,
+    visualPosition: visualWidth(line.slice(0, candidate.start)),
+    positionUnit: 'code-point',
+    inline: candidate.inline,
+  };
+}
+
+function inlineCandidates(line: string): {
+  candidates: ChordCandidate[];
+  diagnostics: ParserDiagnostic[];
+} {
+  const candidates: ChordCandidate[] = [];
+  const diagnostics: ParserDiagnostic[] = [];
+  const bracketPattern = /\[([^\]\r\n]+)\]/gu;
+  const bracketRanges: Array<[number, number]> = [];
+
+  for (const match of line.matchAll(bracketPattern)) {
+    const start = match.index ?? 0;
+    const end = start + match[0].length;
+    bracketRanges.push([start, end]);
+    const inner = match[1] ?? '';
+    const candidate = candidateFromToken(inner, start, end, true, true);
+    if (candidate) {
+      candidates.push(candidate);
+    } else if (inner.trim()) {
+      diagnostics.push({
+        severity: 'warning',
+        code: 'UNRECOGNIZED_CHORD',
+        message: `Marcação entre colchetes não reconhecida como acorde: ${inner.trim()}`,
+        lineNumber: null,
+        column: null,
+        sourceText: line,
+      });
+    }
+  }
+
+  for (const match of line.matchAll(/\S+/gu)) {
+    const token = match[0] ?? '';
+    const start = match.index ?? 0;
+    const end = start + token.length;
+    if (bracketRanges.some(([rangeStart, rangeEnd]) => start < rangeEnd && end > rangeStart)) {
+      continue;
+    }
+
+    const candidate = candidateFromToken(token, start, end, true);
+    if (candidate) candidates.push(candidate);
+  }
+
+  return { candidates: candidates.sort((left, right) => left.start - right.start), diagnostics };
+}
+
+function removeCandidates(line: string, candidates: readonly ChordCandidate[]): string {
+  let result = '';
+  let cursor = 0;
+
+  for (const candidate of candidates) {
+    result += line.slice(cursor, candidate.start);
+    cursor = candidate.end;
+  }
+
+  return `${result}${line.slice(cursor)}`;
+}
+
+function isSection(line: string): string | null {
+  const match = /^\s*\[([^\]\r\n]+)\]\s*$/u.exec(line);
+  if (!match) return null;
+
+  const label = (match[1] ?? '').trim();
+  return parseChord(label) ? null : label || null;
+}
+
+export function isBodyMarker(line: NormalizedLine): boolean {
+  if (!line.text.trim()) return false;
+  return Boolean(
+    isSection(line.text) ||
+    chordLineCandidates(line.text) ||
+    inlineCandidates(line.text).candidates.length,
+  );
+}
+
+export function recognizeLine(line: NormalizedLine): RecognizedLine {
+  if (!line.text.trim()) {
+    return {
+      line,
+      kind: 'blank',
+      text: null,
+      label: null,
+      chordText: null,
+      chords: [],
+      diagnostics: [],
+    };
+  }
+
+  const sectionLabel = isSection(line.text);
+  if (sectionLabel) {
+    return {
+      line,
+      kind: 'section',
+      text: null,
+      label: sectionLabel,
+      chordText: null,
+      chords: [],
+      diagnostics: [],
+    };
+  }
+
+  const chordLine = chordLineCandidates(line.text);
+  if (chordLine) {
+    return {
+      line,
+      kind: 'chords',
+      text: null,
+      label: null,
+      chordText: line.text,
+      chords: chordLine.map((candidate) =>
+        placement(line.text, candidate, line.text.slice(0, candidate.start)),
+      ),
+      diagnostics: [],
+    };
+  }
+
+  const inline = inlineCandidates(line.text);
+  if (inline.candidates.length > 0) {
+    const placements: ParsedChordPlacement[] = [];
+    const lyric = removeCandidates(line.text, inline.candidates);
+
+    for (const candidate of inline.candidates) {
+      const prefix = line.text.slice(0, candidate.start);
+      placements.push(
+        placement(
+          line.text,
+          candidate,
+          removeCandidates(
+            prefix,
+            inline.candidates.filter((item) => item.end <= candidate.start),
+          ),
+        ),
+      );
+    }
+
+    return {
+      line,
+      kind: 'chord-lyric',
+      text: lyric,
+      label: null,
+      chordText: null,
+      chords: placements,
+      diagnostics: inline.diagnostics,
+    };
+  }
+
+  const possibleChordWords = tokenCandidates(line.text, false);
+  const diagnostics =
+    possibleChordWords.length > 0
+      ? [
+          diagnostic(
+            'warning',
+            'UNRECOGNIZED_CHORD',
+            'A linha contém tokens com aparência musical, mas não pôde ser classificada com segurança.',
+            line,
+          ),
+        ]
+      : inline.diagnostics;
+
+  return {
+    line,
+    kind: 'lyric',
+    text: line.text,
+    label: null,
+    chordText: null,
+    chords: [],
+    diagnostics,
+  };
+}

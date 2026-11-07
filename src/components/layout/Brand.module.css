@@ -1,0 +1,41 @@
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.mark {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.text {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagline {
+  overflow: hidden;
+  color: var(--color-text-subtle);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.12em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

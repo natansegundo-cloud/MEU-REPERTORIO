@@ -1,0 +1,38 @@
+.emptyState {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-4);
+  max-width: 42rem;
+  padding: clamp(var(--space-5), 3vw, var(--space-8));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.iconWrap {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.copy {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.03em;
+}
+
+.description {
+  max-width: 58ch;
+  color: var(--color-text-muted);
+}
