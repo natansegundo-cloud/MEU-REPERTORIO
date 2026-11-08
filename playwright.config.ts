@@ -22,11 +22,14 @@ export default defineConfig({
     },
     {
       name: 'webkit-iphone-simulated',
+      workers: 1,
       testMatch: /pwa\.spec\.ts/,
       use: { ...devices['iPhone 15'], browserName: 'webkit' },
     },
     {
       name: 'webkit-ipad-simulated',
+      dependencies: ['webkit-iphone-simulated'],
+      workers: 1,
       testMatch: /pwa\.spec\.ts/,
       use: { ...devices['iPad (gen 11)'], browserName: 'webkit' },
     },
