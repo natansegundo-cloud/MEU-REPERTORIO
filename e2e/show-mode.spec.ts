@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { navigateTo } from './navigation';
+
 interface ViewportWindow {
   readonly innerWidth: number;
   readonly document: { readonly documentElement: { readonly scrollWidth: number } };
@@ -14,10 +16,7 @@ async function importSong(page: Page, title: string, content: string) {
 }
 
 async function createShow(page: Page) {
-  await page
-    .getByRole('button', { name: /Repertórios/ })
-    .first()
-    .click();
+  await navigateTo(page, 'Repertórios');
   await page.getByLabel('Novo repertório').fill('Show de teste');
   await page.getByRole('button', { name: /Criar repertório/ }).click();
   await page.getByTestId('repertory-card').getByRole('button').first().click();

@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
 
+import { navigateTo } from './navigation';
+
 test('mostra o estado da nuvem compatível com a configuração do Supabase', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await navigateTo(page, 'Ajustes');
 
   await expect(page.getByRole('heading', { level: 1, name: 'Nuvem' })).toBeVisible();
   await expect(page.getByText(/Indisponível|Desconectado/)).toBeVisible();
@@ -19,7 +21,7 @@ test('mostra o estado da nuvem compatível com a configuração do Supabase', as
 test('area de nuvem nao cria rolagem horizontal em 390px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await navigateTo(page, 'Ajustes');
 
   await expect(page.getByRole('heading', { level: 1, name: 'Nuvem' })).toBeVisible();
   const scrollWidth = await page.locator('html').evaluate((element: unknown) => {

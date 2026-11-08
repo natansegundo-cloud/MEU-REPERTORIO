@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { navigateTo } from './navigation';
+
 test('inicializa a aplicação sem erros de console', async ({ page }) => {
   const consoleErrors: string[] = [];
 
@@ -17,7 +19,9 @@ test('inicializa a aplicação sem erros de console', async ({ page }) => {
 
   await expect(page).toHaveTitle(/Meu Repertório/);
   await expect(page.getByRole('heading', { level: 1, name: 'Biblioteca' })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: /Navegação/ })).toBeVisible();
+  const desktopNavigation = page.getByRole('navigation', { name: 'Navegação principal' });
+  const mobileMenu = page.getByRole('button', { name: 'Abrir menu' });
+  expect((await desktopNavigation.isVisible()) || (await mobileMenu.isVisible())).toBe(true);
   await expect(page.getByText('Sua biblioteca começa aqui')).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
@@ -26,13 +30,14 @@ test('inicializa a aplicação sem erros de console', async ({ page }) => {
 test('navega entre os módulos da fundação', async ({ page }) => {
   await page.goto('/');
 
-  const navigation = page.getByRole('navigation', { name: /Navegação/ });
-
-  await navigation.getByRole('button', { name: 'Repertórios' }).click();
+  const desktopNavigation = page.getByRole('navigation', { name: 'Navegação principal' });
+  await navigateTo(page, 'Repertórios');
 
   await expect(page.getByRole('heading', { level: 1, name: 'Repertórios' })).toBeVisible();
-  await expect(navigation.getByRole('button', { name: 'Repertórios' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
+  if (await desktopNavigation.isVisible()) {
+    await expect(desktopNavigation.getByRole('button', { name: 'Repertórios' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  }
 });

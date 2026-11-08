@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { navigateTo } from './navigation';
+
 async function importSong(page: Page, title: string, content: string) {
   await page.getByRole('button', { name: 'Importar música' }).click();
   await page.getByLabel(/título/i).fill(title);
@@ -13,7 +15,7 @@ test('cria, adiciona, reordena e mantém um repertório após recarregar', async
   await importSong(page, 'Canção A', 'Tom: C\nC\nLetra A');
   await importSong(page, 'Canção B', 'Tom: D\nD\nLetra B');
 
-  await page.getByRole('button', { name: 'Repertórios' }).first().click();
+  await navigateTo(page, 'Repertórios');
   await page.getByLabel('Novo repertório').fill('Setlist de sábado');
   await page.getByRole('button', { name: 'Criar repertório' }).click();
   await page.getByTestId('repertory-card').getByRole('button').first().click();
@@ -34,7 +36,7 @@ test('cria, adiciona, reordena e mantém um repertório após recarregar', async
   await expect(page.getByText('Tom próprio atualizado.')).toBeVisible();
 
   await page.reload();
-  await page.getByRole('button', { name: 'Repertórios' }).first().click();
+  await navigateTo(page, 'Repertórios');
   await page.getByTestId('repertory-card').getByRole('button').first().click();
   await expect(page.getByTestId('repertory-item').nth(0)).toContainText('Canção B');
   await expect(page.getByTestId('repertory-item').nth(0)).toContainText('Tom: E');
@@ -45,7 +47,7 @@ test('permanece utilizável sem rede depois de carregar a aplicação', async ({
   await page.waitForLoadState('networkidle');
   await context.setOffline(true);
 
-  await page.getByRole('button', { name: 'Repertórios' }).first().click();
+  await navigateTo(page, 'Repertórios');
   await expect(page.getByRole('heading', { name: 'Repertórios' })).toBeVisible();
   await expect(page.getByText('Crie seu primeiro repertório')).toBeVisible();
 });
@@ -55,7 +57,7 @@ test('reordena itens por gesto de toque no editor', async ({ page }) => {
   await importSong(page, 'Toque A', 'Tom: C\nC\nLetra A');
   await importSong(page, 'Toque B', 'Tom: D\nD\nLetra B');
 
-  await page.getByRole('button', { name: 'Repertórios' }).first().click();
+  await navigateTo(page, 'Repertórios');
   await page.getByLabel('Novo repertório').fill('Ordem por toque');
   await page.getByRole('button', { name: 'Criar repertório' }).click();
   await page.getByTestId('repertory-card').getByRole('button').first().click();

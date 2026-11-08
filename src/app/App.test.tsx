@@ -27,4 +27,21 @@ describe('App', () => {
       'page',
     );
   });
+
+  it('abre o menu mobile e devolve o foco ao fechar com Escape', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const trigger = screen.getByRole('button', { name: 'Abrir menu' });
+    await user.click(trigger);
+
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Navegação móvel' });
+    expect(mobileNavigation).toBeInTheDocument();
+    expect(within(mobileNavigation).getByRole('button', { name: 'Biblioteca' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('navigation', { name: 'Navegação móvel' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir menu' })).toHaveFocus();
+  });
 });

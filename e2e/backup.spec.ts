@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { navigateTo } from './navigation';
+
 async function importSong(page: Page, title: string, content: string): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: 'Importar música' }).click();
@@ -28,7 +30,7 @@ async function downloadContent(
 
 test('exporta e restaura um backup completo pela tela de ajustes', async ({ page }) => {
   await importSong(page, 'Backup de teste', 'Tom: C\nC G\nLetra original');
-  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await navigateTo(page, 'Ajustes');
 
   const exported = await downloadContent(page, 'Exportar biblioteca');
   expect(exported.name).toMatch(/^meu-repertorio-backup-\d{4}-\d{2}-\d{2}\.json$/);
@@ -64,7 +66,7 @@ test('exporta uma música individual em TXT com o conteúdo original', async ({ 
 
 test('mostra erro claro para arquivo de backup inválido', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await navigateTo(page, 'Ajustes');
 
   await page.locator('input[type="file"]').setInputFiles({
     name: 'invalido.json',

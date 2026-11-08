@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { navigateTo } from './navigation';
+
 type ServiceWorkerApi = {
   readonly ready: Promise<unknown>;
 };
@@ -29,9 +31,8 @@ test('mantém a navegação essencial disponível depois de ficar offline', asyn
   await page.reload();
 
   await expect(page.getByRole('heading', { level: 1, name: 'Biblioteca' })).toBeVisible();
-  const navigation = page.getByRole('navigation', { name: /Navegação/ });
-  await navigation.getByRole('button', { name: 'Repertórios' }).click();
+  await navigateTo(page, 'Repertórios');
   await expect(page.getByRole('heading', { level: 1, name: 'Repertórios' })).toBeVisible();
-  await navigation.getByRole('button', { name: 'Favoritos' }).click();
+  await navigateTo(page, 'Favoritos');
   await expect(page.getByRole('heading', { level: 1, name: 'Favoritos' })).toBeVisible();
 });

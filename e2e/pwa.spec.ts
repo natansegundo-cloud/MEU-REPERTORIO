@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { navigateTo } from './navigation';
+
 type ServiceWorkerRegistrationLike = {
   readonly active?: { readonly scriptURL: string } | null;
 };
@@ -69,7 +71,7 @@ test('publica um manifest instalável com identidade e ícones válidos', async 
     ]),
   );
 
-  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await navigateTo(page, 'Ajustes');
   await expect(
     page.getByRole('heading', { level: 2, name: 'Adicionar à Tela de Início' }),
   ).toBeVisible();
@@ -92,5 +94,10 @@ test('registra o Service Worker e recarrega o shell em modo offline', async ({ p
   await page.reload();
 
   await expect(page.getByRole('heading', { level: 1, name: 'Biblioteca' })).toBeVisible();
-  await expect(page.locator('nav[aria-label^="Navegação"]:visible')).toHaveCount(1);
+  const mobileMenu = page.getByRole('button', { name: 'Abrir menu' });
+  if (await mobileMenu.isVisible()) {
+    await expect(mobileMenu).toHaveAttribute('aria-expanded', 'false');
+  } else {
+    await expect(page.locator('nav[aria-label="Navegação principal"]:visible')).toHaveCount(1);
+  }
 });

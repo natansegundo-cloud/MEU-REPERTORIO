@@ -118,7 +118,7 @@ Foram ajustados:
 - navegação fixa anterior/próxima;
 - painel inferior de músicas;
 - aviso de atualização;
-- navegação inferior mobile já existente.
+- menu de navegação mobile no canto superior esquerdo, com recuo lateral seguro.
 
 Os estilos usam `env(safe-area-inset-top/right/bottom/left)` junto com
 `viewport-fit=cover`. Assim, a câmera, o sensor, as bordas arredondadas e a barra
@@ -342,3 +342,20 @@ Por isso, a homologação física **não está concluída**.
    motor musical, Supabase ou banco sem necessidade.
 
 Esta etapa não avança automaticamente para outra etapa.
+
+## 14. Atualização da Etapa 19 — navegação mobile
+
+No mobile, a navegação inferior foi removida do AppShell. A Topbar agora exibe um
+botão de menu no canto superior esquerdo, ao lado da marca, somente até o breakpoint
+de 860px. O menu reutiliza `NAVIGATION_ITEMS`, destaca a seção ativa com
+`aria-current="page"` e fecha ao selecionar uma seção, tocar fora ou pressionar Esc.
+
+O foco vai para o primeiro item ao abrir e retorna ao botão ao fechar. O painel usa
+alvos de toque de pelo menos 44px, safe areas da Topbar e animação desabilitada quando
+`prefers-reduced-motion` está ativo. O padding inferior que reservava espaço para a
+BottomNav foi removido; o conteúdo ocupa a tela disponível.
+
+A Sidebar desktop não foi alterada. O modo show continua fora do AppShell e, portanto,
+não exibe o menu global. A validação automatizada atual passou com 31 arquivos Vitest
+e 165 testes, além de 50 E2E em Chromium desktop/mobile e WebKit simulado nas suítes
+PWA. A instalação e o comportamento final em um iPhone/iPad físico continuam pendentes.
