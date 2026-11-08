@@ -1,7 +1,18 @@
-import { ArrowLeft, Download, Edit3, Heart, Music2, Minus, Plus, Save } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowLeft,
+  Download,
+  Edit3,
+  Heart,
+  Menu,
+  MoreHorizontal,
+  Music2,
+  Minus,
+  Plus,
+  Save,
+} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ChordDiagram } from '@/components/music';
+import { ChordDiagramOverlay } from '@/components/music';
 import { Button } from '@/components/ui/Button';
 import { transposeParsedSong } from '@/features/parser';
 import { transposeTonality } from '@/features/transpose';
@@ -36,11 +47,53 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
   const [exportError, setExportError] = useState<string | null>(null);
   const [diagramsEnabled, setDiagramsEnabled] = useState(false);
   const [diagramSymbol, setDiagramSymbol] = useState<string | null>(null);
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+  const moreActionsRef = useRef<HTMLDivElement>(null);
+  const moreActionsPanelRef = useRef<HTMLDivElement>(null);
   const favorite = useIsFavorite(songId);
 
   useEffect(() => {
     void getPreference('reading.diagrams', false).then(setDiagramsEnabled);
   }, []);
+
+  useEffect(() => {
+    if (!moreActionsOpen) return undefined;
+
+    function handlePointerDown(event: PointerEvent): void {
+      if (!moreActionsRef.current?.contains(event.target as Node)) {
+        setMoreActionsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setMoreActionsOpen(false);
+      moreActionsRef.current
+        ?.querySelector<HTMLButtonElement>('[aria-label="Mais ações"]')
+        ?.focus();
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    const firstAction = moreActionsPanelRef.current?.querySelector<HTMLElement>('button');
+    firstAction?.focus();
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [moreActionsOpen]);
+
+  useEffect(() => {
+    if (!toneFeedback && !toneError && !exportFeedback && !exportError) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setToneFeedback(null);
+      setToneError(null);
+      setExportFeedback(null);
+      setExportError(null);
+    }, 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [exportError, exportFeedback, toneError, toneFeedback]);
 
   const preferredShift = song
     ? keyShift(song.originalKey, song.preferredKey ?? song.currentKey)
@@ -85,6 +138,11 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
     }
   }
 
+  const closeChordDiagram = useCallback(() => setDiagramSymbol(null), []);
+
+  const feedback = toneFeedback ?? exportFeedback;
+  const feedbackError = toneError ?? exportError;
+
   if (loading) return <p className={styles.feedback}>Abrindo música…</p>;
   if (error) return <p className={styles.error}>Não foi possível abrir esta música local.</p>;
   if (!song || !displayedStructure) {
@@ -117,7 +175,6 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
           </div>
         </div>
         <div className={styles.headerActions}>
-          <RepertoryPicker songId={song.id} />
           <Button
             variant="secondary"
             aria-pressed={favorite}
@@ -126,26 +183,47 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
             <Heart size={17} fill={favorite ? 'currentColor' : 'none'} />
             {favorite ? 'Favorita' : 'Favoritar'}
           </Button>
-          <Button variant="secondary" onClick={handleExportSong}>
-            <Download size={17} />
-            Exportar TXT
-          </Button>
           <Button variant="secondary" onClick={onEdit}>
             <Edit3 size={17} />
             Editar música
           </Button>
+          <div className={styles.moreActions} ref={moreActionsRef}>
+            <Button
+              className={styles.moreActionsTrigger}
+              variant="secondary"
+              aria-label="Mais ações"
+              aria-expanded={moreActionsOpen}
+              aria-controls="song-more-actions"
+              aria-haspopup="menu"
+              onClick={() => setMoreActionsOpen((current) => !current)}
+            >
+              <MoreHorizontal size={18} />
+            </Button>
+            {moreActionsOpen ? (
+              <div
+                id="song-more-actions"
+                ref={moreActionsPanelRef}
+                className={styles.moreActionsPanel}
+                aria-label="Mais ações da música"
+              >
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    handleExportSong();
+                    setMoreActionsOpen(false);
+                  }}
+                >
+                  <Download size={17} />
+                  Exportar TXT
+                </Button>
+                <RepertoryPicker songId={song.id} />
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
       <section className={styles.tonePanel} aria-label="Controles de tom">
-        <div>
-          <span className={styles.toneLabel}>Tom exibido</span>
-          <strong className={styles.toneValue}>{displayedKey ?? 'Não informado'}</strong>
-          <span className={styles.toneHint}>
-            Original: {song.originalKey ?? 'não informado'} · Preferido:{' '}
-            {song.preferredKey ?? 'original'}
-          </span>
-        </div>
         <div className={styles.toneControls}>
           <button
             type="button"
@@ -157,15 +235,9 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
           >
             <Minus size={16} />
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setManualShift(0);
-              setToneFeedback(null);
-            }}
-          >
-            Original
-          </button>
+          <strong className={styles.toneValue} aria-live="polite">
+            {displayedKey ?? '—'}
+          </strong>
           <button
             type="button"
             aria-label="Subir um semitom"
@@ -176,77 +248,78 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
           >
             <Plus size={16} />
           </button>
-          <Button size="sm" onClick={() => void saveDisplayedKey()}>
-            <Save size={15} /> Salvar tom
+          <button
+            type="button"
+            className={styles.originalTone}
+            onClick={() => {
+              setManualShift(0);
+              setToneFeedback(null);
+            }}
+          >
+            Original
+          </button>
+          <Button size="sm" onClick={() => void saveDisplayedKey()} aria-label="Salvar tom">
+            <Save size={15} /> Salvar
           </Button>
         </div>
       </section>
 
-      {toneFeedback ? (
-        <p className={styles.success} role="status">
-          {toneFeedback}
-        </p>
-      ) : null}
-      {toneError ? (
-        <p className={styles.error} role="alert">
-          {toneError}
-        </p>
-      ) : null}
-      {exportFeedback ? (
-        <p className={styles.success} role="status">
-          {exportFeedback}
-        </p>
-      ) : null}
-      {exportError ? (
-        <p className={styles.error} role="alert">
-          {exportError}
+      {feedback || feedbackError ? (
+        <p
+          className={feedbackError ? styles.toastError : styles.toast}
+          role={feedbackError ? 'alert' : 'status'}
+        >
+          {feedbackError ?? feedback}
         </p>
       ) : null}
 
-      <dl className={styles.meta}>
-        <div>
-          <dt>Tom original</dt>
-          <dd>{song.originalKey ?? 'Não informado'}</dd>
+      {song.originalKey || song.capo !== null || song.tuning ? (
+        <dl className={styles.meta} aria-label="Metadados da música">
+          {song.originalKey ? (
+            <div className={styles.metaChip}>
+              <dt>Tom original</dt>
+              <dd>{song.originalKey}</dd>
+            </div>
+          ) : null}
+          {song.capo !== null ? (
+            <div className={styles.metaChip}>
+              <dt>Capotraste</dt>
+              <dd>Casa {song.capo}</dd>
+            </div>
+          ) : null}
+          {song.tuning ? (
+            <div className={styles.metaChip}>
+              <dt>Afinação</dt>
+              <dd>{song.tuning}</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
+
+      <details className={styles.readingOptions}>
+        <summary>
+          <Menu size={16} aria-hidden="true" />
+          Opções de leitura
+        </summary>
+        <div className={styles.readingTools}>
+          <label>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={diagramsEnabled}
+              onChange={(event) => {
+                const enabled = event.target.checked;
+                setDiagramsEnabled(enabled);
+                void setPreference('reading.diagrams', enabled);
+                if (!enabled) setDiagramSymbol(null);
+              }}
+            />
+            Exibir diagramas de acordes
+          </label>
         </div>
-        <div>
-          <dt>Tom atual</dt>
-          <dd>{displayedKey ?? 'Não informado'}</dd>
-        </div>
-        {song.capo !== null ? (
-          <div>
-            <dt>Capotraste</dt>
-            <dd>Casa {song.capo}</dd>
-          </div>
-        ) : null}
-        {song.tuning ? (
-          <div>
-            <dt>Afinação</dt>
-            <dd>{song.tuning}</dd>
-          </div>
-        ) : null}
-      </dl>
-      <div className={styles.readingTools}>
-        <label>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={diagramsEnabled}
-            onChange={(event) => {
-              const enabled = event.target.checked;
-              setDiagramsEnabled(enabled);
-              void setPreference('reading.diagrams', enabled);
-              if (!enabled) setDiagramSymbol(null);
-            }}
-          />
-          Exibir diagramas de acordes
-        </label>
-      </div>
+      </details>
       {diagramsEnabled && diagramSymbol ? (
-        <ChordDiagram
-          key={diagramSymbol}
-          symbol={diagramSymbol}
-          onClose={() => setDiagramSymbol(null)}
-        />
+        <ChordDiagramOverlay symbol={diagramSymbol} onClose={closeChordDiagram} />
       ) : null}
       <SongSheet
         structure={displayedStructure}

@@ -44,6 +44,7 @@
   background: transparent;
   color: inherit;
   font: inherit;
+  line-height: inherit;
   white-space: pre;
 }
 
@@ -54,6 +55,14 @@
 
 .chordButton:hover {
   color: var(--color-accent);
+}
+
+.chordButton:focus-visible {
+  position: relative;
+  z-index: 1;
+  border-radius: 0.2rem;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .section {

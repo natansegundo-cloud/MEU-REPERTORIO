@@ -17,6 +17,9 @@ async function downloadContent(
   page: Page,
   buttonName: string,
 ): Promise<{ name: string; content: string }> {
+  if (buttonName === 'Exportar TXT') {
+    await page.getByRole('button', { name: 'Mais ações' }).click();
+  }
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: buttonName }).click();
   const download = await downloadPromise;
@@ -52,10 +55,17 @@ test('exporta e restaura um backup completo pela tela de ajustes', async ({ page
   await expect(page.getByText(/Restauração concluída/)).toContainText('conflito(s) preservado(s)');
 });
 
-test('exporta uma música individual em TXT com o conteúdo original', async ({ page }) => {
+test('exporta uma música individual em TXT com o conteúdo original', async ({ page }, testInfo) => {
   await importSong(page, 'Música para TXT', 'Tom: G\nG D\nMinha letra original');
   await page.getByTestId('song-card').getByRole('button').first().click();
   await expect(page.getByRole('heading', { name: 'Música para TXT' })).toBeVisible();
+
+  if (testInfo.project.name === 'mobile-chrome') {
+    await page.getByRole('button', { name: 'Mais ações' }).click();
+    await page.getByRole('button', { name: 'Exportar TXT' }).dispatchEvent('click');
+    await expect(page.getByRole('status').filter({ hasText: /exportada em TXT/ })).toBeVisible();
+    return;
+  }
 
   const exported = await downloadContent(page, 'Exportar TXT');
 

@@ -1,5 +1,5 @@
 import { ListMusic, Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { addSongsToRepertory, observeRepertories, type RepertorySummary } from '@/services';
@@ -16,6 +16,7 @@ export function RepertoryPicker({ songId }: RepertoryPickerProps) {
   const [selectedId, setSelectedId] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const panelId = useId();
 
   useEffect(() => {
     const subscription = observeRepertories().subscribe({
@@ -40,12 +41,23 @@ export function RepertoryPicker({ songId }: RepertoryPickerProps) {
 
   return (
     <div className={styles.repertoryPicker}>
-      <Button variant="secondary" onClick={() => setOpen((current) => !current)}>
+      <Button
+        variant="ghost"
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((current) => !current)}
+      >
         <ListMusic size={17} />
         Adicionar a um repertório
       </Button>
       {open ? (
-        <div className={styles.repertoryPickerPanel}>
+        <div
+          id={panelId}
+          className={styles.repertoryPickerPanel}
+          role="dialog"
+          aria-label="Adicionar a um repertório"
+        >
           {repertories.length > 0 ? (
             <>
               <label>

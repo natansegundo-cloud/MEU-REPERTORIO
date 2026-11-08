@@ -41,6 +41,7 @@ function ChordRow({
               <button
                 className={className}
                 type="button"
+                data-chord-trigger="true"
                 onClick={() => onChordSelect(chord.symbol)}
                 aria-label={`Ver diagrama de ${chord.symbol}`}
               >
