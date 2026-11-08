@@ -10,6 +10,16 @@ vi.mock('mammoth', () => ({
 }));
 
 import { extractBatchDocument, segmentBatchDocument, type BatchDocument } from './batch';
+import { reconstructPdfPageTexts, type PdfTextItem } from './pdf';
+
+function pdfItem(
+  str: string,
+  x: number,
+  y: number,
+  width = Math.max(6, str.length * 6),
+): PdfTextItem {
+  return { str, transform: [1, 0, 0, 1, x, y], width };
+}
 
 function document(text: string, pages?: readonly string[]): BatchDocument {
   const sourcePages = pages ?? [text];
@@ -93,5 +103,77 @@ describe('segmentação de importação em lote', () => {
     expect(result.segments).toHaveLength(2);
     expect(result.warnings[0]).toContain('divisão foi inferida');
     expect(result.segments.every((segment) => segment.warnings.length > 0)).toBe(true);
+  });
+
+  it('agrupa três músicas por cabeçalhos compostos e preserva páginas de continuação', () => {
+    const result = segmentBatchDocument(
+      document('', [
+        'Au de Cabeça\nNatiruts\nTom: Fm\nFm       C#\nPrimeira parte',
+        'Segunda parte\nC#       Fm',
+        'Caraíva\nNatiruts\nTom: B\nB       E\nLetra de Caraíva',
+        'Dois Planetas\nNatiruts\nTom: Gm\nGm       D\nPrimeira parte',
+        'Continuação de Dois Planetas\nCm',
+        'Final de Dois Planetas\nGm',
+      ]),
+    );
+
+    expect(result.segments).toHaveLength(3);
+    expect(
+      result.segments.map((segment) => [segment.title, segment.artist, segment.originalKey]),
+    ).toEqual([
+      ['Au de Cabeça', 'Natiruts', 'Fm'],
+      ['Caraíva', 'Natiruts', 'B'],
+      ['Dois Planetas', 'Natiruts', 'Gm'],
+    ]);
+    expect(result.segments.map((segment) => segment.pageNumbers)).toEqual([[1, 2], [3], [4, 5, 6]]);
+    expect(result.segments[0]?.content).toContain('Segunda parte');
+    expect(result.segments[2]?.content).toContain('Final de Dois Planetas');
+  });
+
+  it('não transforma parágrafos e linhas de acordes em músicas', () => {
+    const result = segmentBatchDocument(
+      document('C\nPrimeira linha\nG\nSegunda linha\nAm\nTerceira linha\nF\nQuarta linha'),
+    );
+
+    expect(result.segments).toHaveLength(1);
+    expect(result.segments[0]?.content).toContain('Quarta linha');
+  });
+
+  it('reconhece metadados rotulados em linhas diferentes', () => {
+    const result = segmentBatchDocument(
+      document('Título: Canção\nArtista: Banda\nTom: D\nD A\nLetra'),
+    );
+
+    expect(result.segments).toHaveLength(1);
+    expect(result.segments[0]).toMatchObject({
+      title: 'Canção',
+      artist: 'Banda',
+      originalKey: 'D',
+    });
+  });
+
+  it('reconstrói fragmentos PDF da mesma linha antes de segmentar', () => {
+    const page = reconstructPdfPageTexts([
+      {
+        width: 595,
+        items: [
+          pdfItem('Au de ', 40, 800, 34),
+          pdfItem('Cabeça', 74, 800, 42),
+          pdfItem('Natiruts', 40, 780, 48),
+          pdfItem('Tom: Fm', 40, 760, 48),
+          pdfItem('Fm', 40, 720, 14),
+          pdfItem('Letra preservada', 40, 700, 90),
+        ],
+      },
+    ])[0]?.text;
+    const result = segmentBatchDocument(document(page ?? ''));
+
+    expect(page).toContain('Au de Cabeça');
+    expect(result.segments).toHaveLength(1);
+    expect(result.segments[0]).toMatchObject({
+      title: 'Au de Cabeça',
+      artist: 'Natiruts',
+      originalKey: 'Fm',
+    });
   });
 });

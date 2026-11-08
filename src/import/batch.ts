@@ -91,22 +91,95 @@ function isLikelyChordLine(line: string): boolean {
   return tokens.every((token) => chord.test(token));
 }
 
-function isStructuralHeader(lines: readonly string[], index: number): boolean {
+interface MetadataLine {
+  readonly label: string;
+  readonly value: string;
+}
+
+function metadataLine(value: string): MetadataLine | null {
+  const match = /^\s*([^:]{1,40})\s*:\s*(.*?)\s*$/u.exec(value);
+  if (!match) return null;
+  return {
+    label: (match[1] ?? '').trim().toLocaleLowerCase('pt-BR'),
+    value: (match[2] ?? '').trim(),
+  };
+}
+
+function isTitleLabel(label: string): boolean {
+  return ['título', 'titulo', 'música', 'musica', 'song'].includes(label);
+}
+
+function isArtistLabel(label: string): boolean {
+  return ['artista', 'artist'].includes(label);
+}
+
+function isKeyLabel(label: string): boolean {
+  return ['tom', 'key'].includes(label);
+}
+
+function isBodyLine(line: string): boolean {
+  const value = line.trim();
+  return isLikelyChordLine(value) || /^\[[^\]]+\]/u.test(value);
+}
+
+function nextContentIndex(lines: readonly string[], index: number): number {
+  for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+    if (lines[cursor]?.trim()) return cursor;
+  }
+  return -1;
+}
+
+function hasBodyAfter(lines: readonly string[], index: number): boolean {
+  for (let cursor = index + 1; cursor < Math.min(lines.length, index + 8); cursor += 1) {
+    if (isBodyLine(lines[cursor] ?? '')) return true;
+  }
+  return false;
+}
+
+/**
+ * A song start requires a header shape, not merely a line that happens to be
+ * short or close to a chord. This prevents lyric/chord fragments from becoming
+ * independent songs.
+ */
+function isSongHeaderStart(
+  lines: readonly string[],
+  pageNumbers: readonly number[],
+  index: number,
+): boolean {
   const title = lines[index]?.trim() ?? '';
-  if (!title || title.length > 90 || isExplicitSeparator(title) || title.includes(':'))
-    return false;
-  const next = lines.slice(index + 1).find((line) => line.trim());
-  const nextIndex = next ? lines.indexOf(next, index + 1) : -1;
-  if (nextIndex < 0) return false;
-  const nextValue = lines[nextIndex]?.trim() ?? '';
-  const after =
-    lines
-      .slice(nextIndex + 1)
-      .find((line) => line.trim())
-      ?.trim() ?? '';
-  const bodyStarts =
-    isLikelyChordLine(after) || /^\[[^\]]+\]/u.test(after) || /^Tom\s*:/iu.test(after);
-  return bodyStarts && (nextValue.length <= 90 || /^Tom\s*:/iu.test(nextValue));
+  if (!title || title.length > 100 || isExplicitSeparator(title)) return false;
+
+  const titleMetadata = metadataLine(title);
+  if (titleMetadata && isTitleLabel(titleMetadata.label)) {
+    return hasBodyAfter(lines, index);
+  }
+
+  if (titleMetadata || isBodyLine(title) || /^\[[^\]]+\]/u.test(title)) return false;
+  const hasHeaderBoundary =
+    index === 0 || pageNumbers[index] !== pageNumbers[index - 1] || !lines[index - 1]?.trim();
+  if (!hasHeaderBoundary) return false;
+  const artistIndex = nextContentIndex(lines, index);
+  if (artistIndex < 0) return false;
+  const artist = lines[artistIndex]?.trim() ?? '';
+  const artistMetadata = metadataLine(artist);
+
+  if (artistMetadata && isArtistLabel(artistMetadata.label)) {
+    const keyIndex = nextContentIndex(lines, artistIndex);
+    if (keyIndex < 0) return false;
+    const key = lines[keyIndex]?.trim() ?? '';
+    const keyMetadata = metadataLine(key);
+    return Boolean(keyMetadata && isKeyLabel(keyMetadata.label) && hasBodyAfter(lines, keyIndex));
+  }
+
+  if (artistMetadata || isBodyLine(artist) || /^\[[^\]]+\]/u.test(artist)) return false;
+  const bodyOrKeyIndex = nextContentIndex(lines, artistIndex);
+  if (bodyOrKeyIndex < 0) return false;
+  const bodyOrKey = lines[bodyOrKeyIndex]?.trim() ?? '';
+  const bodyOrKeyMetadata = metadataLine(bodyOrKey);
+  if (bodyOrKeyMetadata && isKeyLabel(bodyOrKeyMetadata.label)) {
+    return hasBodyAfter(lines, bodyOrKeyIndex);
+  }
+  return isBodyLine(bodyOrKey);
 }
 
 function metadataFromContent(
@@ -115,13 +188,24 @@ function metadataFromContent(
   const lines = normalizeLines(content)
     .map((line) => line.trim())
     .filter(Boolean);
-  const title =
-    lines.find((line) => /^Título\s*:/iu.test(line))?.replace(/^Título\s*:\s*/iu, '') ?? null;
-  const artist =
-    lines.find((line) => /^Artista\s*:/iu.test(line))?.replace(/^Artista\s*:\s*/iu, '') ?? null;
-  const key = lines.find((line) => /^Tom\s*:/iu.test(line))?.replace(/^Tom\s*:\s*/iu, '') ?? null;
-  const fallbackTitle = title ?? lines[0] ?? null;
-  return { title: fallbackTitle, artist, originalKey: key };
+  const metadata = lines.map((line) => ({ line, parsed: metadataLine(line) }));
+  const explicitTitle = metadata.find(({ parsed }) => parsed && isTitleLabel(parsed.label))?.parsed
+    ?.value;
+  const explicitArtist = metadata.find(({ parsed }) => parsed && isArtistLabel(parsed.label))
+    ?.parsed?.value;
+  const explicitKey = metadata.find(({ parsed }) => parsed && isKeyLabel(parsed.label))?.parsed
+    ?.value;
+  const bodyIndex = lines.findIndex((line) => isBodyLine(line));
+  const headerLines = (bodyIndex >= 0 ? lines.slice(0, bodyIndex) : lines).filter((line) => {
+    const parsed = metadataLine(line);
+    return (
+      !parsed ||
+      (!isTitleLabel(parsed.label) && !isArtistLabel(parsed.label) && !isKeyLabel(parsed.label))
+    );
+  });
+  const title = explicitTitle ?? headerLines[0] ?? lines[0] ?? null;
+  const artist = explicitArtist ?? headerLines[1] ?? null;
+  return { title, artist, originalKey: explicitKey ?? null };
 }
 
 function makeSegment(
@@ -196,9 +280,11 @@ function automaticSegments(pages: readonly BatchSourcePage[]): BatchSegmentation
   const lines = pages.flatMap((page) =>
     normalizeLines(page.text).map((text) => ({ text, page: page.pageNumber })),
   );
+  const textLines = lines.map((item) => item.text);
   const starts = lines.flatMap((_, index) =>
-    isStructuralHeader(
-      lines.map((item) => item.text),
+    isSongHeaderStart(
+      textLines,
+      lines.map((line) => line.page),
       index,
     )
       ? [index]

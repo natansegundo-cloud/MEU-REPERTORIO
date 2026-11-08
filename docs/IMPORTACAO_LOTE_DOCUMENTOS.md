@@ -1,7 +1,7 @@
 # Importação em lote de documentos
 
 **Etapa:** 16  
-**Status:** implementada no checkout V2  
+**Status:** implementada e corrigida após homologação real
 **Escopo:** importação local, offline-first, sem alteração do parser musical, do Supabase ou do schema IndexedDB.
 
 ## Fluxo
@@ -24,6 +24,14 @@ Nenhuma música é gravada durante a leitura ou a revisão. Cancelar o fluxo pre
 - Não há OCR. PDFs escaneados, arquivos protegidos ou corrompidos são rejeitados com mensagem clara.
 - A extração não envia arquivos para a internet e não depende do Supabase.
 
+## Causa raiz corrigida
+
+A primeira versão confundia uma linha curta do texto extraído com o início de uma música. A heurística aceitava uma linha seguida, em poucos passos, por um acorde, uma seção ou `Tom:`. Em uma cifra isso também acontece no corpo musical e fazia continuações, fragmentos e cabeçalhos internos virarem novos blocos. Por isso o `CIFRAS.pdf` chegou a produzir 86 blocos.
+
+A correção separa os conceitos de linha extraída, bloco e música identificada. Sem separador explícito, uma nova música agora precisa apresentar um cabeçalho composto confiável: título com artista e corpo, título/artista/tom rotulados, ou título/artista/tom em linhas consecutivas. Cabeçalhos sem rótulos também precisam começar no início do documento, de uma página ou depois de uma linha em branco. Uma continuação de página não satisfaz essa condição e permanece no bloco anterior.
+
+Os metadados são extraídos do bloco inteiro. O sistema reconhece tanto linhas rotuladas (`Título`, `Artista`, `Tom`) quanto o cabeçalho visual em linhas separadas, sem remover letras, cifras, seções, quebras ou posicionamento do conteúdo. O bloco completo continua sendo validado pelo parser musical existente na revisão.
+
 ## Segmentação
 
 A prioridade é deliberada:
@@ -43,7 +51,7 @@ Um separador explícito precisa ocupar sozinho a linha, descontando espaços lat
 
 O separador não entra no conteúdo do bloco. Uma música pode continuar em páginas seguintes sem ser dividida por mudança de página. Separadores misturados, curtos ou blocos vazios geram avisos para revisão.
 
-Quando não há separadores, a divisão estrutural é conservadora e cada bloco recebe o aviso **Bloco separado automaticamente; confirme o início e o fim da música**. Se não houver sinais suficientes, o documento vira um único bloco para evitar perda silenciosa de conteúdo.
+Quando não há separadores, a divisão estrutural é conservadora e cada bloco recebe o aviso **Bloco separado automaticamente; confirme o início e o fim da música**. Se não houver sinais suficientes, o documento vira um único bloco para evitar perda silenciosa de conteúdo. Linhas internas de letra, acordes ou fragmentos de texto não são suficientes para abrir uma música.
 
 ## Persistência e duplicatas
 
@@ -66,11 +74,21 @@ Foram adicionados testes para:
 - rollback quando um bloco é inválido;
 - E2E de abertura do fluxo e erro de DOCX inválido.
 
+Também foi feita homologação real, sem versionar o arquivo, com `C:\Users\conta\Downloads\CIFRAS.pdf`:
+
+| Música                   | Páginas detectadas | Tom detectado |
+| ------------------------ | ------------------ | ------------- |
+| Au de Cabeça — Natiruts  | 1–2                | Fm            |
+| Caraíva — Natiruts       | 3                  | B             |
+| Dois Planetas — Natiruts | 4–6                | Gm            |
+
+Resultado observado: **3 músicas**, não 86 blocos. Os conteúdos das páginas de continuação permaneceram no primeiro e no terceiro bloco correspondentes.
+
 Os testes de PDF seguem usando fixtures sintéticas de `PdfTextItem`; nenhum PDF de terceiros é versionado.
 
 ## Limitações conhecidas
 
-- A qualidade da segmentação automática depende da estrutura do documento; a revisão antes de salvar é obrigatória por decisão de segurança.
+- A qualidade da segmentação automática ainda depende da presença de cabeçalhos reconhecíveis; documentos sem separadores e sem título/metadados podem ser apresentados como um único bloco para revisão.
 - PDF escaneado/imagem exige OCR, que não faz parte desta etapa.
 - DOCX com caixas de texto, elementos flutuantes ou formatação musical complexa pode gerar avisos ou texto simplificado.
 - Páginas físicas de DOCX não são expostas pelo conversor; o bloco é marcado como página 1, enquanto separadores e parágrafos continuam sendo reconhecidos.
