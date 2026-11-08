@@ -5,6 +5,7 @@ import { db } from '@/database';
 import {
   getSong,
   importSong,
+  importSongsBatch,
   listSongs,
   searchSongs,
   softDeleteSong,
@@ -70,6 +71,28 @@ Minha letra`);
       name: 'SongAlreadyExistsError',
       songId: song.id,
     });
+  });
+
+  it('salva um lote atomicamente e ignora conteúdos duplicados', async () => {
+    await importSong('C\nJá existe', { title: 'Local' });
+    const result = await importSongsBatch([
+      { content: 'C\nJá existe', title: 'Duplicada' },
+      { content: 'G\nNova música', title: 'Nova' },
+    ]);
+
+    expect(result.saved.map((song) => song.title)).toEqual(['Nova']);
+    expect(result.duplicates).toEqual(['Duplicada']);
+    expect(await listSongs()).toHaveLength(2);
+  });
+
+  it('não grava nenhum item do lote quando um bloco é inválido', async () => {
+    await expect(
+      importSongsBatch([
+        { content: 'C\nVálida', title: 'Válida' },
+        { content: '   ', title: 'Inválida' },
+      ]),
+    ).rejects.toBeInstanceOf(SongImportError);
+    await expect(listSongs()).resolves.toHaveLength(0);
   });
 
   it('atualiza metadados com nova revisão e faz exclusão lógica', async () => {

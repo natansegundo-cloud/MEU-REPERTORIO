@@ -1,6 +1,7 @@
 export {
   getSong,
   importSong,
+  importSongsBatch,
   listSongs,
   observeSong,
   observeSongs,
@@ -14,6 +15,8 @@ export {
   SongNotFoundError,
   SongRevisionConflictError,
   type SongMetadataOverrides,
+  type BatchSongImportInput,
+  type BatchSongImportResult,
   type SongEditInput,
 } from './songs';
 

@@ -12,6 +12,7 @@ import styles from './ImportSongPage.module.css';
 interface ImportSongPageProps {
   readonly onBack: () => void;
   readonly onImported: (song: Song) => void;
+  readonly onBatch: () => void;
 }
 
 function diagnosticLabel(diagnostic: ParserDiagnostic): string {
@@ -117,7 +118,7 @@ function WarningSummary({ diagnostics }: { readonly diagnostics: readonly Parser
   );
 }
 
-export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
+export function ImportSongPage({ onBack, onImported, onBatch }: ImportSongPageProps) {
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -283,6 +284,14 @@ export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
             rows={16}
           />
         </label>
+        <Button
+          variant="secondary"
+          type="button"
+          onClick={onBatch}
+          disabled={isSubmitting || isReadingFile}
+        >
+          Abrir importação em lote (PDF ou DOCX)
+        </Button>
         <label className={styles.notesField}>
           <span>
             Observações <small>(opcional)</small>

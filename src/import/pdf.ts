@@ -22,6 +22,11 @@ export interface PdfDocumentResult extends PdfHeaderMetadata {
   readonly text: string;
 }
 
+export interface PdfPageText {
+  readonly pageNumber: number;
+  readonly text: string;
+}
+
 interface PdfLine {
   readonly y: number;
   readonly items: readonly PdfTextItem[];
@@ -269,12 +274,21 @@ function renderPage(layout: PageLayout, repeated: ReadonlySet<string>): string {
 }
 
 export function reconstructPdfPages(pages: readonly PdfPageInput[], yTolerance = 3): string {
+  return reconstructPdfPageTexts(pages, yTolerance)
+    .map((page) => page.text)
+    .filter((page) => page.trim())
+    .join('\n\n');
+}
+
+export function reconstructPdfPageTexts(
+  pages: readonly PdfPageInput[],
+  yTolerance = 3,
+): PdfPageText[] {
   const layouts = pages.map((page) => layoutPage(page, yTolerance));
   const repeated = repeatedHeaderFooterLines(layouts);
   return layouts
-    .map((layout) => renderPage(layout, repeated))
-    .filter((page) => page.trim())
-    .join('\n\n');
+    .map((layout, index) => ({ pageNumber: index + 1, text: renderPage(layout, repeated) }))
+    .filter((page) => page.text.trim());
 }
 
 function derivePageWidth(items: readonly PdfTextItem[]): number {
@@ -365,6 +379,22 @@ export function reconstructPdfDocument(
 }
 
 export async function extractPdfDocument(file: Blob): Promise<PdfDocumentResult> {
+  const pages = await extractPdfPageInputs(file);
+  const reconstructed = reconstructPdfPages(pages);
+  const header = extractPdfHeader(reconstructed);
+  return { ...header, text: stripPdfHeader(reconstructed, header) };
+}
+
+export async function extractPdfPages(file: Blob): Promise<PdfPageText[]> {
+  const pages = await extractPdfPageInputs(file);
+  const result = reconstructPdfPageTexts(pages);
+  if (!result.some((page) => page.text.trim())) {
+    throw new Error('Este PDF parece ser uma imagem; não há texto para extrair.');
+  }
+  return result;
+}
+
+async function extractPdfPageInputs(file: Blob): Promise<PdfPageInput[]> {
   if (file.size > MAX_PDF_BYTES) throw new Error('O PDF excede o limite de 20 MB.');
   const pdfjs = await import('pdfjs-dist');
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -391,12 +421,8 @@ export async function extractPdfDocument(file: Blob): Promise<PdfDocumentResult>
       }
       pages.push({ width: viewport.width, items });
     }
-    const document = reconstructPdfDocument(pages);
-    if (!document.text.trim())
-      throw new Error('Este PDF parece ser uma imagem; não há texto para extrair.');
-    return document;
+    return pages;
   } catch (cause: unknown) {
-    if (cause instanceof Error && cause.message.includes('parece ser uma imagem')) throw cause;
     throw new Error('Não foi possível ler este PDF. Ele pode estar protegido ou corrompido.', {
       cause,
     });

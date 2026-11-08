@@ -11,6 +11,15 @@ export interface SongMetadataOverrides {
   readonly notes?: string;
 }
 
+export interface BatchSongImportInput extends SongMetadataOverrides {
+  readonly content: string;
+}
+
+export interface BatchSongImportResult {
+  readonly saved: readonly Song[];
+  readonly duplicates: readonly string[];
+}
+
 export interface SongEditInput {
   readonly title: string;
   readonly artist: string | null;
@@ -198,6 +207,37 @@ export async function importSong(
   });
   notifyLocalSyncChange();
   return saved;
+}
+
+/** Grava vários blocos numa única transação, sem sobrescrever músicas existentes. */
+export async function importSongsBatch(
+  inputs: readonly BatchSongImportInput[],
+): Promise<BatchSongImportResult> {
+  const prepared = inputs.map((input) => {
+    const parsed = applyMetadata(parseSongText(input.content), input);
+    if (!parsed.valid) throw new SongImportError(parsed);
+    return { input, song: { ...toSong(parsed), notes: textOverride(input.notes) } };
+  });
+  await openDatabase();
+
+  const result = await db.transaction('rw', db.songs, async () => {
+    const existing = await db.songs.filter((song) => song.deletedAt === null).toArray();
+    const knownContent = new Set(existing.map((song) => song.content));
+    const saved: Song[] = [];
+    const duplicates: string[] = [];
+    for (const item of prepared) {
+      if (knownContent.has(item.song.content)) {
+        duplicates.push(item.song.title);
+        continue;
+      }
+      await db.songs.add(item.song);
+      knownContent.add(item.song.content);
+      saved.push(item.song);
+    }
+    return { saved, duplicates };
+  });
+  if (result.saved.length > 0) notifyLocalSyncChange();
+  return result;
 }
 
 export async function softDeleteSong(id: EntityId): Promise<void> {

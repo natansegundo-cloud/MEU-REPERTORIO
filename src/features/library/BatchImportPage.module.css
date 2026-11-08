@@ -1,0 +1,132 @@
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+.back {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+.header {
+  margin: 28px 0;
+}
+.eyebrow {
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.title {
+  margin: 6px 0;
+}
+.description,
+.muted {
+  color: var(--color-text-muted);
+}
+.picker {
+  border: 1px dashed var(--color-border);
+  border-radius: 14px;
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+}
+.picker input {
+  width: 100%;
+}
+.feedback,
+.error,
+.success {
+  margin: 16px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+.error {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+.success {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 10%, transparent);
+}
+.summary {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--color-text-muted);
+}
+.list {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--color-surface-raised);
+}
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.cardHeader input[type='checkbox'] {
+  margin-top: 5px;
+}
+.cardTitle {
+  flex: 1;
+  font-weight: 700;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.grid label,
+.content label {
+  display: grid;
+  gap: 5px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+.grid input,
+.content textarea {
+  width: 100%;
+}
+.content {
+  margin-top: 12px;
+}
+.content textarea {
+  min-height: 120px;
+  font-family: var(--font-mono);
+}
+.warnings {
+  color: var(--color-warning);
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+@media (max-width: 650px) {
+  .page {
+    padding-inline: 16px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .actions {
+    flex-direction: column-reverse;
+  }
+}

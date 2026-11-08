@@ -4,7 +4,13 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { UpdateNotice } from '@/components/system/UpdateNotice';
-import { ImportSongPage, LibraryPage, SongEditorPage, SongViewPage } from '@/features/library';
+import {
+  BatchImportPage,
+  ImportSongPage,
+  LibraryPage,
+  SongEditorPage,
+  SongViewPage,
+} from '@/features/library';
 import { RepertoriesPage, RepertoryEditorPage } from '@/features/repertories';
 import { ShowModePage } from '@/features/show-mode';
 import { FavoritesPage } from '@/features/favorites/FavoritesPage';
@@ -21,7 +27,7 @@ interface PlaceholderContent {
   description: string;
 }
 
-type LibraryScreen = 'library' | 'import' | 'song' | 'edit';
+type LibraryScreen = 'library' | 'import' | 'batch-import' | 'song' | 'edit';
 
 interface ShowRoute {
   readonly repertoryId: string;
@@ -133,7 +139,23 @@ export function App() {
   let content: ReactNode;
   if (activeSection === 'library' && libraryScreen === 'import') {
     content = (
-      <ImportSongPage onBack={() => setLibraryScreen('library')} onImported={handleImported} />
+      <ImportSongPage
+        onBack={() => setLibraryScreen('library')}
+        onImported={handleImported}
+        onBatch={() => setLibraryScreen('batch-import')}
+      />
+    );
+  } else if (activeSection === 'library' && libraryScreen === 'batch-import') {
+    content = (
+      <BatchImportPage
+        onBack={() => setLibraryScreen('import')}
+        onCompleted={(count) => {
+          setNotice(
+            `${count} música${count === 1 ? '' : 's'} importada${count === 1 ? '' : 's'} com sucesso.`,
+          );
+          setLibraryScreen('library');
+        }}
+      />
     );
   } else if (activeSection === 'library' && libraryScreen === 'song' && selectedSongId) {
     content = (
