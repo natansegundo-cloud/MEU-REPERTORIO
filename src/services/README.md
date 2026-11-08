@@ -15,5 +15,4 @@ Componentes e hooks não acessam tabelas Dexie diretamente.
 - `updateSongMetadata` atualiza metadados sem perder a estrutura musical.
 
 Os componentes usam `useSongs` e `useSong`, que assinam `liveQuery` por meio do
-serviço. Sincronização, backup e repertórios continuam fora do escopo desta
-etapa.
+serviço. Sincronização e repertórios continuam fora do escopo desta etapa.

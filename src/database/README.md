@@ -1,7 +1,7 @@
 # Camada de banco local
 
-A persistencia usa IndexedDB por meio do Dexie. Componentes nao acessam as
-tabelas diretamente; servicos e hooks fazem essa fronteira.
+A persistência usa IndexedDB por meio do Dexie. Componentes não acessam as
+tabelas diretamente; serviços e hooks fazem essa fronteira.
 
 ## Banco atual
 
@@ -9,33 +9,31 @@ tabelas diretamente; servicos e hooks fazem essa fronteira.
 - Schema: `5`
 - Tabelas: `songs`, `repertories`, `repertoryItems`, `favorites`,
   `preferences` e `settings`
-- Exclusoes de entidades sao logicas e preservam tombstones.
-- `revision` e incrementada em cada escrita sincronizavel.
-- `syncPending` e a outbox por registro de musicas, repertorios e itens.
+- Exclusões de entidades são lógicas e preservam tombstones.
+- `revision` é incrementada em cada escrita sincronizável.
+- `syncPending` é a outbox por registro de músicas, repertórios e itens.
 
-## Migracoes
+## Evolução do schema
 
-As migracoes publicadas sao imutaveis e incrementais. Nenhuma migracao remove
+As versões publicadas são imutáveis e incrementais. Nenhuma versão remove
 registros ou reprocessa texto sem necessidade.
 
-- v2: adiciona `deletedAt` e `structure` legada usando o parser existente;
-- v3: adiciona campos editaveis de musica;
-- v4: adiciona `preferredKey` aos itens de repertorio;
+- v2: adiciona `deletedAt` e `structure` usando o parser existente;
+- v3: adiciona campos editáveis de música;
+- v4: adiciona `preferredKey` aos itens de repertório;
 - v5: adiciona `syncPending` e marca registros anteriores como pendentes para a
-  primeira sincronizacao.
+  primeira sincronização.
 
-`legacyId` e um identificador opcional usado pela migracao da V1; ele nao muda
-o schema indexado do Dexie. Favoritos continuam locais e entram no backup JSON,
-mas nao entram na sincronizacao com a nuvem.
+Favoritos continuam locais e não entram na sincronização com a nuvem.
 
-Detalhes e o teste de preservacao da v5 estao em
-[`MIGRATION_V5.md`](MIGRATION_V5.md) e `migrations.test.ts`.
+Detalhes e o teste de preservação da v5 estão em
+[`SCHEMA_V5.md`](SCHEMA_V5.md) e `migrations.test.ts`.
 
 ## Integridade
 
-- Escritas de musicas usam transacoes Dexie.
-- Escritas que alteram repertorio e itens usam a mesma transacao.
+- Escritas de músicas usam transações Dexie.
+- Escritas que alteram repertório e itens usam a mesma transação.
 - Editores verificam a revision observada antes de salvar.
-- Exclusoes logicas incrementam a revision e entram na outbox.
-- Cursores de pull, dono local e ultima sincronizacao ficam em `settings`.
-- Preferencias, favoritos e posicao do modo show nao sincronizam nesta etapa.
+- Exclusões lógicas incrementam a revision e entram na outbox.
+- Cursores de pull, dono local e última sincronização ficam em `settings`.
+- Preferências, favoritos e posição do modo show não sincronizam nesta etapa.

@@ -14,7 +14,7 @@ import {
 import styles from './CloudPage.module.css';
 
 const STATUS_LABELS: Record<CloudStatus, string> = {
-  unavailable: 'Indisponivel',
+  unavailable: 'Indisponível',
   disconnected: 'Desconectado',
   syncing: 'Sincronizando',
   synced: 'Sincronizado',
@@ -31,7 +31,7 @@ function statusTone(status: CloudStatus): 'neutral' | 'accent' | 'success' | 'wa
 }
 
 function formatDate(value: string | null): string {
-  if (!value) return 'Ainda nao sincronizado';
+  if (!value) return 'Ainda não sincronizado';
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(
     new Date(value),
   );
@@ -50,7 +50,7 @@ export function CloudPage({ syncController = cloudSyncController }: CloudPagePro
       <PageHeader
         eyebrow="Ajustes"
         title="Nuvem"
-        description="Sincronizacao opcional, mantendo sua biblioteca disponivel offline."
+        description="Sincronização opcional, mantendo sua biblioteca disponível offline."
       />
 
       <section className={styles.panel} aria-labelledby="cloud-title">
@@ -60,8 +60,8 @@ export function CloudPage({ syncController = cloudSyncController }: CloudPagePro
               <Cloud size={21} aria-hidden="true" /> Dados entre aparelhos
             </h2>
             <p className={styles.description}>
-              A nuvem sincroniza musicas, repertorios e itens de repertorio. Preferencias de
-              leitura, favoritos e posicao do show ficam somente neste dispositivo.
+              A nuvem sincroniza músicas, repertórios e itens de repertório. Preferências de
+              leitura, favoritos e posição do show ficam somente neste dispositivo.
             </p>
           </div>
           <Badge tone={statusTone(snapshot.status)}>{STATUS_LABELS[snapshot.status]}</Badge>
@@ -69,7 +69,7 @@ export function CloudPage({ syncController = cloudSyncController }: CloudPagePro
 
         {snapshot.status === 'unavailable' ? (
           <p className={styles.message} role="status">
-            Configure as variaveis do Supabase para habilitar a nuvem. O app local continua
+            Configure as variáveis do Supabase para habilitar a nuvem. O app local continua
             funcionando normalmente.
           </p>
         ) : null}
@@ -82,13 +82,13 @@ export function CloudPage({ syncController = cloudSyncController }: CloudPagePro
               </span>
               <span className={styles.pending} role="status" aria-live="polite">
                 {snapshot.pending > 0
-                  ? `${snapshot.pending} alteracao(oes) pendente(s)`
-                  : 'Nenhuma alteracao pendente'}
+                  ? `${snapshot.pending} alteração(ões) pendente(s)`
+                  : 'Nenhuma alteração pendente'}
               </span>
             </div>
             <div className={styles.statusRow}>
               <span className={styles.lastSync}>
-                Ultima sincronizacao: {formatDate(snapshot.lastSyncedAt)}
+                Última sincronização: {formatDate(snapshot.lastSyncedAt)}
               </span>
             </div>
             <div className={styles.actions}>
@@ -133,7 +133,7 @@ export function CloudPage({ syncController = cloudSyncController }: CloudPagePro
         {snapshot.syncErrors.length > 0 ? (
           <div className={styles.error} role="alert">
             {snapshot.syncErrors.length} registro(s) com erro de envio. Eles continuam salvos
-            localmente e serao tentados novamente.
+            localmente e serão tentados novamente.
           </div>
         ) : null}
 

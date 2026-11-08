@@ -49,6 +49,14 @@ Minha letra`);
     expect(await listSongs()).toHaveLength(2);
   });
 
+  it('preserva observações fornecidas pela revisão da importação', async () => {
+    const song = await importSong('C\nLetra', {
+      notes: 'Composição de: Autoria\nAfinação: padrão',
+    });
+
+    expect(song.notes).toBe('Composição de: Autoria\nAfinação: padrão');
+  });
+
   it('impede salvar conteúdo vazio e preserva os diagnósticos do parser', async () => {
     await expect(importSong('   ')).rejects.toBeInstanceOf(SongImportError);
     await expect(listSongs()).resolves.toHaveLength(0);

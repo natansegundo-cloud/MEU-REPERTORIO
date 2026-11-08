@@ -9,7 +9,7 @@ import { RepertoriesPage, RepertoryEditorPage } from '@/features/repertories';
 import { ShowModePage } from '@/features/show-mode';
 import { FavoritesPage } from '@/features/favorites/FavoritesPage';
 import { CloudPage } from '@/features/settings/CloudPage';
-import { DataPage } from '@/features/settings/DataPage';
+import { SettingsPage } from '@/features/settings/SettingsPage';
 import { useCloudSync } from '@/sync';
 import type { Song } from '@/types';
 
@@ -49,8 +49,7 @@ const PLACEHOLDERS: Record<Exclude<SectionId, 'library'>, PlaceholderContent> = 
   },
   settings: {
     title: 'Ajustes na próxima etapa',
-    description:
-      'Preferências e configurações terão uma área dedicada, persistida localmente e preparada para backup.',
+    description: 'Preferências e configurações terão uma área dedicada, persistida localmente.',
   },
 };
 
@@ -214,7 +213,7 @@ export function App() {
   } else if (activeSection === 'settings') {
     content = (
       <>
-        <DataPage />
+        <SettingsPage />
         <CloudPage />
       </>
     );

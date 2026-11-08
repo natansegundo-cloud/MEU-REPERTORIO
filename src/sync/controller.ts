@@ -104,7 +104,7 @@ export class CloudSyncController {
     if (!this.backend) return;
     const normalized = email.trim();
     if (!normalized) {
-      this.update({ status: 'error', message: 'Informe um e-mail valido.' });
+      this.update({ status: 'error', message: 'Informe um e-mail válido.' });
       return;
     }
     try {
@@ -146,7 +146,7 @@ export class CloudSyncController {
     if (!navigator.onLine) {
       this.update({
         status: 'offline',
-        message: 'Sem internet. Os dados locais continuam disponiveis.',
+        message: 'Sem internet. Os dados locais continuam disponíveis.',
       });
       return;
     }
@@ -163,7 +163,7 @@ export class CloudSyncController {
         lastSyncedAt: result.completedAt,
         message:
           result.errors > 0
-            ? `${result.errors} registro(s) nao puderam ser enviados. Os demais continuam sincronizados.`
+            ? `${result.errors} registro(s) não puderam ser enviados. Os demais continuam sincronizados.`
             : null,
       });
     } catch (cause: unknown) {
@@ -211,7 +211,7 @@ export class CloudSyncController {
 
   private handleOffline = (): void => {
     if (this.snapshot.session)
-      this.update({ status: 'offline', message: 'Sem internet. Alteracoes ficam pendentes.' });
+      this.update({ status: 'offline', message: 'Sem internet. Alterações ficam pendentes.' });
   };
 
   private handleVisibility = (): void => {
@@ -233,7 +233,7 @@ export class CloudSyncController {
   }
 
   private errorMessage(cause: unknown): string {
-    return cause instanceof Error ? cause.message : 'Nao foi possivel sincronizar agora.';
+    return cause instanceof Error ? cause.message : 'Não foi possível sincronizar agora.';
   }
 }
 

@@ -68,7 +68,7 @@ async function applyRemoteRow(
   if (!remoteWins(row, local)) return false;
 
   if (local && row.revision === local.revision && sameRemoteContent(row, local)) {
-    // A margem do cursor pode baixar a mesma linha novamente. Nao regrava-la
+    // A margem do cursor pode baixar a mesma linha novamente. Não regravá-la
     // torna a aplicacao realmente idempotente, preservando tambem updatedAt local.
     if (local.syncPending !== true && !local.syncError) return false;
   }
@@ -79,7 +79,7 @@ async function applyRemoteRow(
     row.revision === local.revision &&
     !sameRemoteContent(row, local)
   ) {
-    onNotice?.('Uma alteracao local foi descartada: a versao do servidor venceu.');
+    onNotice?.('Uma alteração local foi descartada: a versão do servidor venceu.');
   }
 
   const next = remoteToLocal(row);
@@ -244,7 +244,7 @@ export class SyncCoordinator {
       }
       if (!page.hasMore) break;
       if (!nextCursor || (requestCursor && compareSyncCursors(nextCursor, requestCursor) <= 0)) {
-        throw new Error(`O backend nao avancou o cursor de ${table}.`);
+        throw new Error(`O backend não avançou o cursor de ${table}.`);
       }
       requestCursor = nextCursor;
     }

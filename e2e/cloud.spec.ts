@@ -5,8 +5,8 @@ test('mostra a nuvem como indisponivel sem configuracao do Supabase', async ({ p
   await page.getByRole('button', { name: 'Ajustes' }).first().click();
 
   await expect(page.getByRole('heading', { level: 1, name: 'Nuvem' })).toBeVisible();
-  await expect(page.getByText('Indisponivel')).toBeVisible();
-  await expect(page.getByText(/Configure as variaveis/)).toBeVisible();
+  await expect(page.getByText('Indisponível')).toBeVisible();
+  await expect(page.getByText(/Configure as variáveis/)).toBeVisible();
 });
 
 test('area de nuvem nao cria rolagem horizontal em 390px', async ({ page }) => {

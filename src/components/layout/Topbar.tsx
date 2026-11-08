@@ -9,7 +9,7 @@ export function Topbar() {
       <div className={styles.mobileBrand}>
         <Brand compact />
       </div>
-      <p className={styles.label}>Base local · V2</p>
+      <p className={styles.label}>Biblioteca local</p>
       <ConnectionStatus />
     </header>
   );

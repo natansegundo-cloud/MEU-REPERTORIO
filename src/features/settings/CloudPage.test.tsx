@@ -16,7 +16,7 @@ class TestCloudBackend implements CloudBackend {
   private listener: ((value: AuthSession | null) => void) | null = null;
 
   getSession(): Promise<AuthSession | null> {
-    if (this.failSession) throw new Error('sessao indisponivel');
+    if (this.failSession) throw new Error('sessão indisponível');
     return Promise.resolve(this.currentSession);
   }
 
@@ -68,12 +68,12 @@ describe('CloudPage', () => {
     for (const controller of controllers.splice(0)) controller.stop();
   });
 
-  it('mostra a nuvem indisponivel sem variaveis', async () => {
+  it('mostra a nuvem indisponível sem variáveis', async () => {
     const controller = new CloudSyncController(null);
     controllers.push(controller);
     render(<CloudPage syncController={controller} />);
-    expect(await screen.findByText('Indisponivel')).toBeInTheDocument();
-    expect(screen.getByText(/Configure as variaveis/)).toBeInTheDocument();
+    expect(await screen.findByText('Indisponível')).toBeInTheDocument();
+    expect(screen.getByText(/Configure as variáveis/)).toBeInTheDocument();
   });
 
   it('mostra desconectado e o formulario de magic link', async () => {

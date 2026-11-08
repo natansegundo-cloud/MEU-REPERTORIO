@@ -3,10 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { MeuRepertorioDatabase } from '@/database';
 import { parseSongText } from '@/features/parser';
-import type { Repertory, RepertoryItem, Song } from '@/types';
-
-import { createBackup } from '@/backup';
-import { restoreBackup } from '@/backup/restore';
+import type { Song } from '@/types';
 
 import {
   InMemorySyncBackend,
@@ -60,41 +57,6 @@ function makeSong(
     deletedAt,
     revision,
     syncPending,
-    syncError: null,
-  };
-}
-
-function makeRepertory(id: string, name: string, revision = 1): Repertory {
-  return {
-    id,
-    name,
-    description: null,
-    createdAt,
-    updatedAt: createdAt,
-    deletedAt: null,
-    revision,
-    syncPending: true,
-    syncError: null,
-  };
-}
-
-function makeRepertoryItem(
-  id: string,
-  repertoryId: string,
-  songId: string,
-  revision = 1,
-): RepertoryItem {
-  return {
-    id,
-    repertoryId,
-    songId,
-    position: 1000,
-    preferredKey: null,
-    createdAt,
-    updatedAt: createdAt,
-    deletedAt: null,
-    revision,
-    syncPending: true,
     syncError: null,
   };
 }
@@ -274,86 +236,6 @@ describe('sync mappers and coordinator', () => {
     expect((await databaseB.songs.get('song-delete'))?.deletedAt).not.toBeNull();
   });
 
-  it('preserva como tombstone o que falta no backup de uma substituicao', async () => {
-    const database = await createDatabase('sync-restore-replace-tombstones');
-    databases.push(database);
-    const backend = new InMemorySyncBackend();
-    const sync = new SyncCoordinator(backend, userA, { database, retryEnabled: false });
-    const songA = makeSong('song-a', 'A');
-    const songB = makeSong('song-b', 'B');
-    const repertoryA = makeRepertory('repertory-a', 'A');
-    const repertoryB = makeRepertory('repertory-b', 'B');
-    const itemA = makeRepertoryItem('item-a', repertoryA.id, songA.id);
-    const itemB = makeRepertoryItem('item-b', repertoryB.id, songB.id);
-    await database.songs.bulkAdd([songA, songB]);
-    await database.repertories.bulkAdd([repertoryA, repertoryB]);
-    await database.repertoryItems.bulkAdd([itemA, itemB]);
-    await sync.runOnce();
-
-    const completeBackup = await createBackup(database);
-    const backup = {
-      ...completeBackup,
-      songs: completeBackup.songs.filter((value) => value.id === songA.id),
-      repertories: completeBackup.repertories.filter((value) => value.id === repertoryA.id),
-      repertoryItems: completeBackup.repertoryItems.filter((value) => value.id === itemA.id),
-      counts: {
-        ...completeBackup.counts,
-        songs: 1,
-        repertories: 1,
-        repertoryItems: 1,
-      },
-    };
-
-    await restoreBackup(backup, {
-      database,
-      strategy: 'replace',
-      confirmation: 'SUBSTITUIR',
-    });
-
-    expect(await database.songs.get(songB.id)).toMatchObject({
-      deletedAt: expect.any(String),
-      revision: 2,
-      syncPending: true,
-    });
-    expect(await database.repertories.get(repertoryB.id)).toMatchObject({
-      deletedAt: expect.any(String),
-      revision: 2,
-      syncPending: true,
-    });
-    expect(await database.repertoryItems.get(itemB.id)).toMatchObject({
-      deletedAt: expect.any(String),
-      revision: 2,
-      syncPending: true,
-    });
-
-    await sync.runOnce();
-    for (const [table, id] of [
-      ['songs', songB.id],
-      ['repertories', repertoryB.id],
-      ['repertoryItems', itemB.id],
-    ] as const) {
-      expect(backend.snapshot(table).find((row) => row.id === id)).toMatchObject({
-        deleted_at: expect.any(String),
-        revision: 2,
-      });
-    }
-    expect(await database.songs.get(songB.id)).toMatchObject({ syncPending: false });
-    expect(await database.repertories.get(repertoryB.id)).toMatchObject({ syncPending: false });
-    expect(await database.repertoryItems.get(itemB.id)).toMatchObject({ syncPending: false });
-
-    await sync.runOnce();
-    for (const [table, id, localValue] of [
-      ['songs', songB.id, await database.songs.get(songB.id)],
-      ['repertories', repertoryB.id, await database.repertories.get(repertoryB.id)],
-      ['repertoryItems', itemB.id, await database.repertoryItems.get(itemB.id)],
-    ] as const) {
-      expect(localValue).toMatchObject({ deletedAt: expect.any(String), syncPending: false });
-      expect(backend.snapshot(table).find((row) => row.id === id)).toMatchObject({
-        deleted_at: expect.any(String),
-      });
-    }
-  });
-
   it('vence empate com tombstone e descarta edicao offline sem ressurreicao', async () => {
     const databaseA = await createDatabase('sync-equal-delete-a');
     const databaseB = await createDatabase('sync-equal-delete-b');
@@ -391,7 +273,7 @@ describe('sync mappers and coordinator', () => {
       revision: 2,
       syncPending: false,
     });
-    expect(notices).toContain('Uma alteracao local foi descartada: a versao do servidor venceu.');
+    expect(notices).toContain('Uma alteração local foi descartada: a versão do servidor venceu.');
     expect(backend.snapshot('songs').find((row) => row.id === 'song-equal-delete')).toMatchObject({
       deleted_at: '2026-01-01T00:00:30.000Z',
     });
@@ -579,7 +461,7 @@ describe('sync mappers and coordinator', () => {
     expect(await database.songs.get('song-idempotent')).toMatchObject({ syncPending: false });
   });
 
-  it('enfileira uma nova solicitacao durante uma sincronizacao', async () => {
+  it('enfileira uma nova solicitação durante uma sincronização', async () => {
     const database = await createDatabase('sync-queue');
     databases.push(database);
     const backend = new CountingBackend(new InMemorySyncBackend());

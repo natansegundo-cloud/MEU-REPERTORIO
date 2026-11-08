@@ -13,7 +13,7 @@ export function Brand({ compact = false, className }: BrandProps) {
       <img className={styles.mark} src="/brand/icon.svg" alt="" width={40} height={40} />
       <div className={styles.text}>
         <span className={styles.name}>Meu Repertório</span>
-        {compact ? null : <span className={styles.tagline}>V2 · Fundação</span>}
+        {compact ? null : <span className={styles.tagline}>Cifras e repertórios</span>}
       </div>
     </div>
   );

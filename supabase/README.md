@@ -1,8 +1,7 @@
 # Supabase da V2
 
-Esta pasta contem apenas SQL para aplicacao manual. O Codex nao executa este
-SQL e a aplicacao nao altera as tabelas antigas (`songs`, `setlists` ou o
-bucket de PDFs).
+Esta pasta contém apenas SQL para aplicação manual. O Codex não executa este
+SQL e a aplicação não altera o banco automaticamente.
 
 ## Modelo
 
@@ -24,11 +23,10 @@ locais por dispositivo e nao sao enviados.
 
 ## Aplicacao segura
 
-1. Crie ou escolha um projeto Supabase de teste separado do projeto usado pela
-   versao antiga.
+1. Crie ou escolha um projeto Supabase de teste separado do ambiente de
+   produção.
 2. No SQL Editor, execute o arquivo
-   `migrations/202611070001_v2_sync.sql` inteiro, sem misturar com os SQL da
-   versao antiga.
+   `migrations/202611070001_v2_sync.sql` inteiro, sem misturar outros arquivos.
 3. Confira as tabelas, indices, triggers, funcoes e politicas usando o
    checklist abaixo.
 4. Configure apenas `VITE_SUPABASE_URL` e
@@ -36,7 +34,7 @@ locais por dispositivo e nao sao enviados.
    ficar no frontend; nenhuma chave administrativa deve ser usada.
 5. Teste login, pull, push, exclusao e dois aparelhos no projeto de teste.
 6. Repita o mesmo arquivo no projeto real somente depois de revisar o diff do
-   SQL e confirmar que as tabelas antigas continuam intactas.
+   SQL e confirmar o escopo das tabelas V2.
 
 ## Checklist RLS
 
@@ -71,5 +69,5 @@ drop table if exists public.v2_songs;
 drop function if exists public.v2_set_updated_at();
 ```
 
-No projeto real, prefira manter as tabelas e corrigir uma nova migracao. Nao
+No projeto real, prefira manter as tabelas e corrigir em uma nova alteração. Não
 apague tombstones como parte deste rollback.

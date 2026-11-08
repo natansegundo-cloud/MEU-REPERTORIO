@@ -16,5 +16,5 @@ de linha, cifra, posição e validação. O editor mantém uma cópia temporári
 salva somente por ação explícita, usando a revisão da música para evitar
 sobrescrita acidental.
 
-Exclusões são lógicas. Sincronização, repertórios, favoritos avançados, backup e
-modo show permanecem fora desta etapa.
+Exclusões são lógicas. Sincronização, repertórios, favoritos avançados e modo
+show permanecem fora desta etapa.

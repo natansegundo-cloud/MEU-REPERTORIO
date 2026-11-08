@@ -8,7 +8,7 @@ export type IsoDateString = string;
 
 export type JsonPrimitive = string | number | boolean | null;
 
-/** Valor serializável, seguro para backup e restauração em JSON. */
+/** Valor serializável, seguro para persistência em JSON. */
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 
 /**
@@ -27,7 +27,7 @@ export interface BaseEntity {
   syncPending: boolean;
   /** Falha do ultimo envio desta entidade; mantida para exibicao e nova tentativa. */
   syncError?: string | null;
-  /** Identificador preservado ao importar dados de outra versao do app. */
+  /** Identificador opcional preservado em integrações externas. */
   legacyId?: string;
 }
 
@@ -42,7 +42,7 @@ export interface Song extends BaseEntity {
   rhythm: string | null;
   strumming: string | null;
   difficulty: string | null;
-  /** Texto bruto da importação original, preservado para auditoria e backup. */
+  /** Texto bruto da importação original, preservado para auditoria. */
   content: string;
   structure: ParsedSong;
   notes: string | null;

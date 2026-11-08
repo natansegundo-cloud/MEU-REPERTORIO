@@ -3,7 +3,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { parseSongText } from '@/features/parser';
-import { extractPdfText, readTextFile } from '@/import';
+import { extractPdfDocument, readTextFile } from '@/import';
 import { importSong, SongImportError } from '@/services';
 import type { ParserDiagnostic, Song } from '@/types';
 
@@ -56,6 +56,21 @@ function replaceOrAddKey(input: string, key: string): string {
   return `${keyLine}\n${input}`;
 }
 
+function fallbackPdfMetadata(fileName: string): { title: string | null; artist: string | null } {
+  const baseName = fileName
+    .replace(/\.(?:txt|pdf)$/iu, '')
+    .replace(/\s+-\s+cifra\s+club\s*$/iu, '')
+    .trim();
+  const parts = baseName
+    .split(/\s+-\s+/u)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    title: parts[0] ?? (baseName || null),
+    artist: parts.length > 1 ? parts.slice(1).join(' - ') : null,
+  };
+}
+
 function WarningSummary({ diagnostics }: { readonly diagnostics: readonly ParserDiagnostic[] }) {
   const groups = useMemo(() => groupWarnings(diagnostics), [diagnostics]);
   const [showAll, setShowAll] = useState(false);
@@ -106,6 +121,7 @@ export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
+  const [notes, setNotes] = useState('');
   const [keyDraft, setKeyDraft] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorDiagnostics, setErrorDiagnostics] = useState<readonly ParserDiagnostic[]>([]);
@@ -119,10 +135,18 @@ export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
     setFeedback(null);
     try {
       const isPdf = file.type === 'application/pdf' || /\.pdf$/iu.test(file.name);
-      const text = isPdf ? await extractPdfText(file) : await readTextFile(file);
+      const pdfDocument = isPdf ? await extractPdfDocument(file) : null;
+      const text = pdfDocument?.text ?? (await readTextFile(file));
       setContent(text);
       setKeyDraft(null);
-      if (!title.trim()) setTitle(file.name.replace(/\.(?:txt|pdf)$/iu, ''));
+      const fallback = isPdf
+        ? fallbackPdfMetadata(file.name)
+        : { title: file.name.replace(/\.(?:txt|pdf)$/iu, ''), artist: null };
+      if (!title.trim()) {
+        setTitle(pdfDocument?.title ?? fallback.title ?? '');
+      }
+      if (!artist.trim()) setArtist(pdfDocument?.artist ?? fallback.artist ?? '');
+      if (!notes.trim() && pdfDocument?.notes) setNotes(pdfDocument.notes);
       setFeedback(
         isPdf
           ? 'Texto do PDF extraído. Revise antes de salvar.'
@@ -158,7 +182,7 @@ export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
         keyDraft && keyDraft.trim() && keyDraft.trim() !== parsedKey
           ? replaceOrAddKey(content, keyDraft.trim())
           : content;
-      const song = await importSong(importContent, { title, artist });
+      const song = await importSong(importContent, { title, artist, notes });
       const warnings = song.structure.diagnostics.filter((item) => item.severity === 'warning');
       setFeedback(
         warnings.length > 0
@@ -257,6 +281,17 @@ export function ImportSongPage({ onBack, onImported }: ImportSongPageProps) {
             }}
             placeholder={'Cole aqui a cifra completa…\n\nTom: A\nA7M        E/G#\nMinha letra'}
             rows={16}
+          />
+        </label>
+        <label className={styles.notesField}>
+          <span>
+            Observações <small>(opcional)</small>
+          </span>
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Composição, afinação ou outras informações"
+            rows={3}
           />
         </label>
         <WarningSummary diagnostics={parsedPreview?.diagnostics ?? []} />

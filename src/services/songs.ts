@@ -8,6 +8,7 @@ import { notifyLocalSyncChange } from '@/sync';
 export interface SongMetadataOverrides {
   readonly title?: string;
   readonly artist?: string;
+  readonly notes?: string;
 }
 
 export interface SongEditInput {
@@ -183,7 +184,7 @@ export async function importSong(
   const parsed = applyMetadata(parseSongText(input), overrides);
   if (!parsed.valid) throw new SongImportError(parsed);
 
-  const song = toSong(parsed);
+  const song = { ...toSong(parsed), notes: textOverride(overrides.notes) };
   await openDatabase();
 
   const saved = await db.transaction('rw', db.songs, async () => {

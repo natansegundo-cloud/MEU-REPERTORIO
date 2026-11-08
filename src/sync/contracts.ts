@@ -101,7 +101,7 @@ export class SyncAccountMismatchError extends Error {
   readonly remoteUserId: string;
 
   constructor(localUserId: string, remoteUserId: string) {
-    super('Esta conta nao corresponde a dona dos dados locais. A sincronizacao foi interrompida.');
+    super('Esta conta não corresponde à dona dos dados locais. A sincronização foi interrompida.');
     this.name = 'SyncAccountMismatchError';
     this.localUserId = localUserId;
     this.remoteUserId = remoteUserId;

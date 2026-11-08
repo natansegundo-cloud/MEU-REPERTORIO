@@ -33,7 +33,7 @@ export class SupabaseBackend implements CloudBackend {
   async getSession(): Promise<AuthSession | null> {
     const { data, error } = await this.client.auth.getSession();
     if (error)
-      throw new SyncBackendError('Nao foi possivel recuperar a sessao da nuvem.', { cause: error });
+      throw new SyncBackendError('Não foi possível recuperar a sessão da nuvem.', { cause: error });
     return toAuthSession(data.session);
   }
 
@@ -45,13 +45,13 @@ export class SupabaseBackend implements CloudBackend {
       options,
     });
     if (error)
-      throw new SyncBackendError('Nao foi possivel enviar o link de acesso.', { cause: error });
+      throw new SyncBackendError('Não foi possível enviar o link de acesso.', { cause: error });
   }
 
   async signOut(): Promise<void> {
     const { error } = await this.client.auth.signOut();
     if (error)
-      throw new SyncBackendError('Nao foi possivel sair da conta da nuvem.', { cause: error });
+      throw new SyncBackendError('Não foi possível sair da conta da nuvem.', { cause: error });
   }
 
   onAuthStateChange(listener: (session: AuthSession | null) => void): () => void {
@@ -82,7 +82,7 @@ export class SupabaseBackend implements CloudBackend {
 
     const { data, error } = await query;
     if (error)
-      throw new SyncBackendError('Nao foi possivel baixar os dados da nuvem.', { cause: error });
+      throw new SyncBackendError('Não foi possível baixar os dados da nuvem.', { cause: error });
     const rows = (data ?? []) as RemoteRow[];
     const last = rows.at(-1);
     return {
@@ -102,7 +102,7 @@ export class SupabaseBackend implements CloudBackend {
     })) as unknown as { data: unknown; error: Error | null };
     const { data, error } = result;
     if (error)
-      throw new SyncBackendError('Nao foi possivel enviar os dados da nuvem.', { cause: error });
+      throw new SyncBackendError('Não foi possível enviar os dados da nuvem.', { cause: error });
     return (data ?? []) as RemoteRow[];
   }
 }

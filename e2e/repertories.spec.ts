@@ -31,6 +31,7 @@ test('cria, adiciona, reordena e mantém um repertório após recarregar', async
   await expect(page.getByTestId('repertory-item').nth(0)).toContainText('Canção B');
   await page.getByTestId('repertory-item').nth(0).getByLabel('Tom próprio').fill('E');
   await page.getByTestId('repertory-item').nth(0).getByLabel('Tom próprio').press('Tab');
+  await expect(page.getByText('Tom próprio atualizado.')).toBeVisible();
 
   await page.reload();
   await page.getByRole('button', { name: 'Repertórios' }).first().click();
