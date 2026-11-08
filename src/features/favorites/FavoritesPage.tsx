@@ -1,4 +1,5 @@
 import { Heart } from 'lucide-react';
+import { useState } from 'react';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { softDeleteSong, toggleFavorite } from '@/services';
@@ -13,9 +14,24 @@ interface FavoritesPageProps {
 }
 
 export function FavoritesPage({ onOpenSong }: FavoritesPageProps) {
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const { data: songs, loading, error } = useSongs('');
   const favoriteIds = useFavoriteIds();
   const favorites = songs.filter((song) => favoriteIds.has(song.id));
+
+  async function handleDelete(id: string): Promise<void> {
+    const song = favorites.find((item) => item.id === id);
+    if (!song || !window.confirm(`Excluir “${song.title}” da biblioteca?`)) return;
+
+    setDeleteError(null);
+    try {
+      await softDeleteSong(id);
+    } catch (cause: unknown) {
+      setDeleteError(
+        cause instanceof Error ? cause.message : 'Não foi possível excluir esta música.',
+      );
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -29,6 +45,11 @@ export function FavoritesPage({ onOpenSong }: FavoritesPageProps) {
       {loading ? <p className={styles.feedback}>Carregando favoritos…</p> : null}
       {error ? (
         <p className={styles.error}>Não foi possível carregar os favoritos locais.</p>
+      ) : null}
+      {deleteError ? (
+        <p className={styles.error} role="alert">
+          {deleteError}
+        </p>
       ) : null}
       {!loading && !error && favorites.length === 0 ? (
         <EmptyState
@@ -45,7 +66,7 @@ export function FavoritesPage({ onOpenSong }: FavoritesPageProps) {
               key={song.id}
               song={song}
               onOpen={onOpenSong}
-              onDelete={(id) => void softDeleteSong(id)}
+              onDelete={(id) => void handleDelete(id)}
               favorite
               onToggleFavorite={(id) => void toggleFavorite(id)}
             />

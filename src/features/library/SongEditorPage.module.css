@@ -81,7 +81,7 @@
   min-width: 0;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
-  background: var(--color-background);
+  background: var(--color-surface-raised);
   color: var(--color-text);
   padding: 0.7rem 0.8rem;
   font: inherit;
@@ -120,7 +120,7 @@
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: var(--color-background);
+  background: var(--color-surface-raised);
 }
 .lineNumber {
   padding-top: 0.7rem;

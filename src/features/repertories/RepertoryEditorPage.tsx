@@ -100,6 +100,10 @@ export function RepertoryEditorPage({
   }
 
   async function handleRemove(itemId: string): Promise<void> {
+    const entry = detail?.items.find((candidate) => candidate.item.id === itemId);
+    const title = entry?.song?.title ?? 'esta música';
+    if (!window.confirm(`Remover “${title}” deste repertório?`)) return;
+
     clearMessages();
     try {
       await removeRepertoryItem(itemId);

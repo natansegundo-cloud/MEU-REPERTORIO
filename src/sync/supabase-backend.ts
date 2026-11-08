@@ -22,6 +22,24 @@ const RPC_NAMES: Record<SyncTable, string> = {
   repertoryItems: 'v2_upsert_repertory_items',
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function remoteRowsForUser(data: unknown, userId: string): RemoteRow[] {
+  if (data === null || data === undefined) return [];
+  if (!Array.isArray(data)) {
+    throw new SyncBackendError('A resposta da nuvem tem um formato inválido.');
+  }
+  const rows = data as RemoteRow[];
+  if (
+    rows.some((row) => !isRecord(row) || typeof row.user_id !== 'string' || row.user_id !== userId)
+  ) {
+    throw new SyncBackendError('A resposta da nuvem pertence a outra conta.');
+  }
+  return rows;
+}
+
 function toAuthSession(session: Session | null): AuthSession | null {
   if (!session?.user) return null;
   return { userId: session.user.id, email: session.user.email ?? null };
@@ -83,7 +101,7 @@ export class SupabaseBackend implements CloudBackend {
     const { data, error } = await query;
     if (error)
       throw new SyncBackendError('Não foi possível baixar os dados da nuvem.', { cause: error });
-    const rows = (data ?? []) as RemoteRow[];
+    const rows = remoteRowsForUser(data, userId);
     const last = rows.at(-1);
     return {
       rows,
@@ -94,7 +112,7 @@ export class SupabaseBackend implements CloudBackend {
 
   async push(
     table: SyncTable,
-    _userId: string,
+    userId: string,
     rows: readonly RemoteRow[],
   ): Promise<readonly RemoteRow[]> {
     const result = (await this.client.rpc(RPC_NAMES[table], {
@@ -103,7 +121,7 @@ export class SupabaseBackend implements CloudBackend {
     const { data, error } = result;
     if (error)
       throw new SyncBackendError('Não foi possível enviar os dados da nuvem.', { cause: error });
-    return (data ?? []) as RemoteRow[];
+    return remoteRowsForUser(data, userId);
   }
 }
 
@@ -112,6 +130,13 @@ export function createSupabaseBackend(): CloudBackend | null {
   const url = env.VITE_SUPABASE_URL?.trim();
   const publishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
   if (!url || !publishableKey) return null;
+
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') return null;
+  } catch {
+    return null;
+  }
 
   const client = createClient(url, publishableKey, {
     auth: {

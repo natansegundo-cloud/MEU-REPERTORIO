@@ -22,6 +22,7 @@ export default defineConfig({
         'brand/maskable-512.png',
       ],
       manifest: {
+        id: '/',
         name: 'Meu Repertório',
         short_name: 'Repertório',
         description:

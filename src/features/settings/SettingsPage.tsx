@@ -2,8 +2,10 @@ import { HardDrive } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { PageHeader } from '@/components/layout/PageHeader';
+import { InstallHelp } from '@/components/system/InstallHelp';
 import { requestPersistentStorage, type StoragePersistenceStatus } from '@/services';
 
+import { BackupPanel } from './BackupPanel';
 import styles from './SettingsPage.module.css';
 
 export function SettingsPage() {
@@ -39,6 +41,8 @@ export function SettingsPage() {
                 : 'Verificando a proteção dos dados locais…'}
         </p>
       </section>
+      <InstallHelp />
+      <BackupPanel />
     </div>
   );
 }

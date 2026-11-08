@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+type ServiceWorkerApi = {
+  readonly ready: Promise<unknown>;
+};
+
+type CacheStorageApi = {
+  keys: () => Promise<string[]>;
+};
+
 test('mantém a navegação essencial disponível depois de ficar offline', async ({
   page,
   context,
@@ -7,10 +15,15 @@ test('mantém a navegação essencial disponível depois de ficar offline', asyn
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: 'Biblioteca' })).toBeVisible();
   await page.evaluate(async () => {
-    const serviceWorker = (navigator as Navigator & { serviceWorker?: { ready: Promise<unknown> } })
-      .serviceWorker;
-    if (serviceWorker) await serviceWorker.ready;
+    const browserNavigator = navigator as Navigator & { serviceWorker: ServiceWorkerApi };
+    await browserNavigator.serviceWorker.ready;
   });
+
+  const cacheKeys = await page.evaluate(() => {
+    const browserCaches = (globalThis as typeof globalThis & { caches: CacheStorageApi }).caches;
+    return browserCaches.keys();
+  });
+  expect(cacheKeys.some((key) => key.includes('workbox-precache'))).toBe(true);
 
   await context.setOffline(true);
   await page.reload();

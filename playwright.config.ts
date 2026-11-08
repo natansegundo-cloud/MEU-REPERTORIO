@@ -20,6 +20,16 @@ export default defineConfig({
       name: 'mobile-chrome',
       use: { ...devices['Pixel 7'] },
     },
+    {
+      name: 'webkit-iphone-simulated',
+      testMatch: /pwa\.spec\.ts/,
+      use: { ...devices['iPhone 15'], browserName: 'webkit' },
+    },
+    {
+      name: 'webkit-ipad-simulated',
+      testMatch: /pwa\.spec\.ts/,
+      use: { ...devices['iPad (gen 11)'], browserName: 'webkit' },
+    },
   ],
   webServer: {
     command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',

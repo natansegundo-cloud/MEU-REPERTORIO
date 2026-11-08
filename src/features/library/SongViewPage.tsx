@@ -1,11 +1,18 @@
-import { ArrowLeft, Edit3, Heart, Music2, Minus, Plus, Save } from 'lucide-react';
+import { ArrowLeft, Download, Edit3, Heart, Music2, Minus, Plus, Save } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ChordDiagram } from '@/components/music';
 import { Button } from '@/components/ui/Button';
 import { transposeParsedSong } from '@/features/parser';
 import { transposeTonality } from '@/features/transpose';
-import { getPreference, setPreference, toggleFavorite, updateSongPreferredKey } from '@/services';
+import {
+  downloadTextFile,
+  getPreference,
+  setPreference,
+  songTextFileName,
+  toggleFavorite,
+  updateSongPreferredKey,
+} from '@/services';
 
 import { SongSheet } from '@/features/songs';
 import { baseSongStructure, keyShift } from '@/features/songs/display';
@@ -25,6 +32,8 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
   const [manualShift, setManualShift] = useState<number | null>(null);
   const [toneFeedback, setToneFeedback] = useState<string | null>(null);
   const [toneError, setToneError] = useState<string | null>(null);
+  const [exportFeedback, setExportFeedback] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [diagramsEnabled, setDiagramsEnabled] = useState(false);
   const [diagramSymbol, setDiagramSymbol] = useState<string | null>(null);
   const favorite = useIsFavorite(songId);
@@ -58,6 +67,20 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
     } catch (cause: unknown) {
       setToneError(
         cause instanceof Error ? cause.message : 'Não foi possível salvar o tom preferido.',
+      );
+    }
+  }
+
+  function handleExportSong(): void {
+    if (!song) return;
+    setExportFeedback(null);
+    setExportError(null);
+    try {
+      downloadTextFile(song.content, songTextFileName(song), 'text/plain;charset=utf-8');
+      setExportFeedback('Música exportada em TXT.');
+    } catch (cause: unknown) {
+      setExportError(
+        cause instanceof Error ? cause.message : 'Não foi possível exportar a música.',
       );
     }
   }
@@ -102,6 +125,10 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
           >
             <Heart size={17} fill={favorite ? 'currentColor' : 'none'} />
             {favorite ? 'Favorita' : 'Favoritar'}
+          </Button>
+          <Button variant="secondary" onClick={handleExportSong}>
+            <Download size={17} />
+            Exportar TXT
           </Button>
           <Button variant="secondary" onClick={onEdit}>
             <Edit3 size={17} />
@@ -163,6 +190,16 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
       {toneError ? (
         <p className={styles.error} role="alert">
           {toneError}
+        </p>
+      ) : null}
+      {exportFeedback ? (
+        <p className={styles.success} role="status">
+          {exportFeedback}
+        </p>
+      ) : null}
+      {exportError ? (
+        <p className={styles.error} role="alert">
+          {exportError}
         </p>
       ) : null}
 

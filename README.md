@@ -16,6 +16,7 @@ Versão de lançamento: **2.0.0**.
 - área de Nuvem com magic link, estados offline/erro/sincronizado e proteção
   contra mistura de contas;
 - importação TXT/PDF e cache sob demanda do PDF.js;
+- backup local JSON versionado, restauração segura e exportação TXT individual;
 - SQL novo em `supabase/migrations/` e instruções de aplicação manual em
   `supabase/README.md`.
 
@@ -62,6 +63,14 @@ projeto. A aplicação deve ser manual, primeiro em um projeto de teste, conform
 
 Todos os testes usam IndexedDB falso e backend em memória; nenhum teste acessa
 o Supabase real ou depende de rede.
+
+## Backup e restauração
+
+Em **Ajustes**, use **Exportar biblioteca** para criar um JSON v1 offline ou
+**Selecionar backup** para validar e restaurar uma cópia. A restauração mescla
+registros por padrão, preserva conflitos locais e só substitui conflitos após
+confirmação explícita. O formato e as limitações estão documentados em
+[`docs/BACKUP_RESTAURACAO.md`](docs/BACKUP_RESTAURACAO.md).
 
 ## Lançamento 2.0.0
 

@@ -21,3 +21,4 @@ export * from './repertories';
 export * from './preferences';
 export * from './favorites';
 export * from './storage';
+export * from './backup';

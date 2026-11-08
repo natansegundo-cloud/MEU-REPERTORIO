@@ -28,6 +28,7 @@ export function LibraryPage({
 }: LibraryPageProps) {
   const [query, setQuery] = useState('');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const { data: songs, loading, error } = useSongs(query);
   const favoriteIds = useFavoriteIds();
   const visibleSongs = onlyFavorites ? songs.filter((song) => favoriteIds.has(song.id)) : songs;
@@ -36,10 +37,11 @@ export function LibraryPage({
     const song = songs.find((item) => item.id === id);
     if (!song || !window.confirm(`Excluir “${song.title}” da biblioteca?`)) return;
 
+    setDeleteError(null);
     try {
       await softDeleteSong(id);
-    } catch {
-      // O estado reativo continuará intacto; a falha é apresentada no próximo ciclo.
+    } catch (cause: unknown) {
+      setDeleteError(cause instanceof Error ? cause.message : 'Falha ao excluir a música.');
     }
   }
 
@@ -98,6 +100,11 @@ export function LibraryPage({
 
       {loading ? <p className={styles.feedback}>Carregando biblioteca…</p> : null}
       {error ? <p className={styles.error}>Não foi possível carregar as músicas locais.</p> : null}
+      {deleteError ? (
+        <p className={styles.error} role="alert">
+          {deleteError}
+        </p>
+      ) : null}
 
       {!loading && !error && visibleSongs.length === 0 ? (
         query ? (
