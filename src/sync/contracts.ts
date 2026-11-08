@@ -71,6 +71,9 @@ export interface AuthSession {
 export interface CloudBackend extends SyncBackend {
   getSession(): Promise<AuthSession | null>;
   sendMagicLink(email: string): Promise<void>;
+  signInWithGoogle(): Promise<void>;
+  sendOtp(email: string): Promise<void>;
+  verifyOtp(email: string, token: string): Promise<void>;
   signOut(): Promise<void>;
   onAuthStateChange(listener: (session: AuthSession | null) => void): () => void;
 }

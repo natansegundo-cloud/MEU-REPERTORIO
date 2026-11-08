@@ -45,6 +45,11 @@ function toAuthSession(session: Session | null): AuthSession | null {
   return { userId: session.user.id, email: session.user.email ?? null };
 }
 
+function authRedirectOptions(): { emailRedirectTo?: string; redirectTo?: string } {
+  if (typeof window === 'undefined') return {};
+  return { emailRedirectTo: window.location.origin, redirectTo: window.location.origin };
+}
+
 export class SupabaseBackend implements CloudBackend {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -56,14 +61,40 @@ export class SupabaseBackend implements CloudBackend {
   }
 
   async sendMagicLink(email: string): Promise<void> {
-    const options =
-      typeof window === 'undefined' ? {} : { emailRedirectTo: window.location.origin };
+    const { emailRedirectTo } = authRedirectOptions();
     const { error } = await this.client.auth.signInWithOtp({
       email,
-      options,
+      options: emailRedirectTo ? { emailRedirectTo } : {},
     });
     if (error)
       throw new SyncBackendError('Não foi possível enviar o link de acesso.', { cause: error });
+  }
+
+  async signInWithGoogle(): Promise<void> {
+    const { redirectTo } = authRedirectOptions();
+    const { error } = await this.client.auth.signInWithOAuth({
+      provider: 'google',
+      options: redirectTo ? { redirectTo } : {},
+    });
+    if (error)
+      throw new SyncBackendError('Não foi possível iniciar o acesso com Google.', { cause: error });
+  }
+
+  async sendOtp(email: string): Promise<void> {
+    const { error } = await this.client.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
+    if (error)
+      throw new SyncBackendError('Não foi possível enviar o código de acesso.', { cause: error });
+  }
+
+  async verifyOtp(email: string, token: string): Promise<void> {
+    const { error } = await this.client.auth.verifyOtp({ email, token, type: 'email' });
+    if (error)
+      throw new SyncBackendError('O código é inválido ou expirou. Solicite um novo código.', {
+        cause: error,
+      });
   }
 
   async signOut(): Promise<void> {
@@ -143,6 +174,7 @@ export function createSupabaseBackend(): CloudBackend | null {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      flowType: 'pkce',
     },
   });
   return new SupabaseBackend(client);

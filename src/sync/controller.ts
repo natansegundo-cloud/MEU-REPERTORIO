@@ -18,6 +18,9 @@ export interface CloudSnapshot {
   readonly message: string | null;
   readonly notice: string | null;
   readonly magicLinkSent: boolean;
+  readonly otpSent: boolean;
+  readonly otpResendAt: number | null;
+  readonly authBusy: boolean;
 }
 
 const initialSnapshot: CloudSnapshot = {
@@ -29,6 +32,9 @@ const initialSnapshot: CloudSnapshot = {
   message: null,
   notice: null,
   magicLinkSent: false,
+  otpSent: false,
+  otpResendAt: null,
+  authBusy: false,
 };
 
 export class CloudSyncController {
@@ -42,6 +48,7 @@ export class CloudSyncController {
   private authUnsubscribe: (() => void) | null = null;
   private accountBlocked = false;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly otpCooldownMs = 30_000;
 
   constructor(backend: CloudBackend | null = createSupabaseBackend()) {
     this.backend = backend;
@@ -102,20 +109,93 @@ export class CloudSyncController {
 
   async sendMagicLink(email: string): Promise<void> {
     if (!this.backend) return;
+    if (this.snapshot.authBusy) return;
     const normalized = email.trim();
     if (!normalized) {
       this.update({ status: 'error', message: 'Informe um e-mail válido.' });
       return;
     }
+    this.update({ authBusy: true, message: null });
     try {
       await this.backend.sendMagicLink(normalized);
       this.update({
         status: 'disconnected',
         message: 'Link enviado. Confira seu e-mail para entrar.',
         magicLinkSent: true,
+        authBusy: false,
       });
     } catch (cause: unknown) {
-      this.update({ status: 'error', message: this.errorMessage(cause) });
+      this.update({ status: 'error', message: this.errorMessage(cause), authBusy: false });
+    }
+  }
+
+  async signInWithGoogle(): Promise<void> {
+    if (!this.backend || this.snapshot.authBusy) return;
+    this.update({ authBusy: true, message: null });
+    try {
+      await this.backend.signInWithGoogle();
+      this.update({ authBusy: false, message: 'Redirecionando para o Google…' });
+    } catch (cause: unknown) {
+      this.update({ status: 'error', message: this.errorMessage(cause), authBusy: false });
+    }
+  }
+
+  async sendOtp(email: string): Promise<void> {
+    if (!this.backend || this.snapshot.authBusy) return;
+    const normalized = email.trim();
+    if (!normalized) {
+      this.update({ status: 'error', message: 'Informe um e-mail válido.' });
+      return;
+    }
+    const resendAt = this.snapshot.otpResendAt ?? 0;
+    if (resendAt > Date.now()) {
+      const seconds = Math.ceil((resendAt - Date.now()) / 1000);
+      this.update({
+        status: 'error',
+        message: `Aguarde ${seconds}s para reenviar o código.`,
+      });
+      return;
+    }
+    this.update({ authBusy: true, message: null });
+    try {
+      await this.backend.sendOtp(normalized);
+      this.update({
+        status: 'disconnected',
+        message: 'Código enviado. Confira seu e-mail e digite os 6 dígitos.',
+        otpSent: true,
+        otpResendAt: Date.now() + this.otpCooldownMs,
+        magicLinkSent: false,
+        authBusy: false,
+      });
+    } catch (cause: unknown) {
+      this.update({ status: 'error', message: this.errorMessage(cause), authBusy: false });
+    }
+  }
+
+  async verifyOtp(email: string, token: string): Promise<void> {
+    if (!this.backend || this.snapshot.authBusy) return;
+    const normalized = email.trim();
+    const normalizedToken = token.trim();
+    if (!normalized || !/^\d{6}$/u.test(normalizedToken)) {
+      this.update({
+        status: 'error',
+        message: 'Digite o código de 6 dígitos recebido por e-mail.',
+      });
+      return;
+    }
+    this.update({ authBusy: true, message: null });
+    try {
+      await this.backend.verifyOtp(normalized, normalizedToken);
+      const session = await this.backend.getSession();
+      this.update({
+        otpSent: false,
+        otpResendAt: null,
+        authBusy: false,
+        message: session ? null : 'Código confirmado. Recuperando sua sessão…',
+      });
+      if (session) await this.handleSession(session);
+    } catch (cause: unknown) {
+      this.update({ status: 'error', message: this.errorMessage(cause), authBusy: false });
     }
   }
 
@@ -125,7 +205,15 @@ export class CloudSyncController {
       await this.backend.signOut();
       this.coordinator = null;
       this.accountBlocked = false;
-      this.update({ status: 'disconnected', session: null, message: null, magicLinkSent: false });
+      this.update({
+        status: 'disconnected',
+        session: null,
+        message: null,
+        magicLinkSent: false,
+        otpSent: false,
+        otpResendAt: null,
+        authBusy: false,
+      });
     } catch (cause: unknown) {
       this.update({ status: 'error', message: this.errorMessage(cause) });
     }
@@ -179,7 +267,14 @@ export class CloudSyncController {
     this.accountBlocked = false;
     this.coordinator = null;
     if (!session) {
-      this.update({ status: 'disconnected', session: null, magicLinkSent: false });
+      this.update({
+        status: 'disconnected',
+        session: null,
+        magicLinkSent: false,
+        otpSent: false,
+        otpResendAt: null,
+        authBusy: false,
+      });
       return;
     }
 
@@ -190,6 +285,9 @@ export class CloudSyncController {
       status: navigator.onLine ? 'syncing' : 'offline',
       message: null,
       magicLinkSent: false,
+      otpSent: false,
+      otpResendAt: null,
+      authBusy: false,
     });
     this.coordinator = new SyncCoordinator(this.backend as CloudBackend, session.userId, {
       onNotice: (notice) => this.showNotice(notice),

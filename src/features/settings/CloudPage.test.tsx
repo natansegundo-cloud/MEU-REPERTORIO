@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { AuthSession, CloudBackend, PullPage, RemoteRow, SyncCursor, SyncTable } from '@/sync';
@@ -13,6 +13,9 @@ class TestCloudBackend implements CloudBackend {
   failSession = false;
   delayPull = false;
   releasePull: (() => void) | null = null;
+  googleSignInCount = 0;
+  otpEmail: string | null = null;
+  verifiedOtp: { email: string; token: string } | null = null;
   private listener: ((value: AuthSession | null) => void) | null = null;
 
   getSession(): Promise<AuthSession | null> {
@@ -21,6 +24,21 @@ class TestCloudBackend implements CloudBackend {
   }
 
   sendMagicLink(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  signInWithGoogle(): Promise<void> {
+    this.googleSignInCount += 1;
+    return Promise.resolve();
+  }
+
+  sendOtp(email: string): Promise<void> {
+    this.otpEmail = email;
+    return Promise.resolve();
+  }
+
+  verifyOtp(email: string, token: string): Promise<void> {
+    this.verifiedOtp = { email, token };
     return Promise.resolve();
   }
 
@@ -82,6 +100,61 @@ describe('CloudPage', () => {
     render(<CloudPage syncController={controller} />);
     expect(await screen.findByText('Desconectado')).toBeInTheDocument();
     expect(screen.getByLabelText('E-mail')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entrar com Google' })).toBeInTheDocument();
+  });
+
+  it('inicia o login Google pelo controlador existente', async () => {
+    const backend = new TestCloudBackend();
+    const controller = new CloudSyncController(backend);
+    controllers.push(controller);
+    render(<CloudPage syncController={controller} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Entrar com Google' }));
+
+    await waitFor(() => expect(backend.googleSignInCount).toBe(1));
+    expect(await screen.findByText('Redirecionando para o Google…')).toBeInTheDocument();
+  });
+
+  it('envia e valida OTP com reenvio protegido por intervalo', async () => {
+    const backend = new TestCloudBackend();
+    const controller = new CloudSyncController(backend);
+    controllers.push(controller);
+    render(<CloudPage syncController={controller} />);
+
+    fireEvent.change(await screen.findByLabelText('E-mail'), {
+      target: { value: 'teste@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar código por e-mail' }));
+
+    expect(await screen.findByLabelText('Código de 6 dígitos')).toBeInTheDocument();
+    expect(backend.otpEmail).toBe('teste@example.com');
+    expect(screen.getByRole('button', { name: /Reenviar código \(\d+s\)/ })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText('Código de 6 dígitos'), {
+      target: { value: '123456' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar código' }));
+
+    await waitFor(() =>
+      expect(backend.verifiedOtp).toEqual({ email: 'teste@example.com', token: '123456' }),
+    );
+  });
+
+  it('não envia OTP quando o código digitado não tem seis dígitos', async () => {
+    const backend = new TestCloudBackend();
+    const controller = new CloudSyncController(backend);
+    controllers.push(controller);
+    render(<CloudPage syncController={controller} />);
+
+    fireEvent.change(await screen.findByLabelText('E-mail'), {
+      target: { value: 'teste@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar código por e-mail' }));
+    const codeInput = await screen.findByLabelText('Código de 6 dígitos');
+    fireEvent.change(codeInput, { target: { value: '123' } });
+
+    expect(screen.getByRole('button', { name: 'Confirmar código' })).toBeDisabled();
+    expect(backend.verifiedOtp).toBeNull();
   });
 
   it('mostra sincronizando e depois sincronizado', async () => {

@@ -1,5 +1,5 @@
-import { Cloud, LogIn, LogOut, RefreshCw, ShieldAlert } from 'lucide-react';
-import { useState } from 'react';
+import { Cloud, KeyRound, LogIn, LogOut, RefreshCw, ShieldAlert } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
@@ -44,6 +44,17 @@ interface CloudPageProps {
 export function CloudPage({ syncController = cloudSyncController }: CloudPageProps) {
   const snapshot = useCloudSync(syncController);
   const [email, setEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [now, setNow] = useState(() => Date.now());
+  const otpCooldownSeconds = snapshot.otpResendAt
+    ? Math.max(0, Math.ceil((snapshot.otpResendAt - now) / 1000))
+    : 0;
+
+  useEffect(() => {
+    if (!snapshot.otpResendAt || snapshot.otpResendAt <= now) return;
+    const timer = window.setTimeout(() => setNow(Date.now()), 1_000);
+    return () => window.clearTimeout(timer);
+  }, [now, snapshot.otpResendAt]);
 
   return (
     <div className={styles.page}>
@@ -104,30 +115,91 @@ export function CloudPage({ syncController = cloudSyncController }: CloudPagePro
             </div>
           </>
         ) : snapshot.status !== 'unavailable' ? (
-          <form
-            className={styles.form}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void syncController.sendMagicLink(email);
-            }}
-          >
-            <label className={styles.label}>
-              E-mail
-              <input
-                className={styles.input}
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="voce@exemplo.com"
-              />
-            </label>
-            <div className={styles.actions}>
-              <Button type="submit" disabled={!email.trim()}>
-                <LogIn size={16} /> Entrar por link no e-mail
-              </Button>
+          <div className={styles.authOptions}>
+            <Button
+              className={styles.googleButton}
+              onClick={() => void syncController.signInWithGoogle()}
+              disabled={snapshot.authBusy}
+            >
+              <LogIn size={16} /> Entrar com Google
+            </Button>
+
+            <div className={styles.divider} aria-hidden="true">
+              <span>ou use seu e-mail</span>
             </div>
-          </form>
+
+            <form
+              className={styles.form}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void syncController.sendOtp(email);
+              }}
+            >
+              <label className={styles.label}>
+                E-mail
+                <input
+                  className={styles.input}
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="voce@exemplo.com"
+                />
+              </label>
+              <div className={styles.actions}>
+                <Button type="submit" disabled={!email.trim() || snapshot.authBusy}>
+                  <KeyRound size={16} /> Enviar código por e-mail
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => void syncController.sendMagicLink(email)}
+                  disabled={!email.trim() || snapshot.authBusy}
+                >
+                  <LogIn size={16} /> Entrar por link
+                </Button>
+              </div>
+            </form>
+
+            {snapshot.otpSent ? (
+              <form
+                className={styles.form}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void syncController.verifyOtp(email, otpCode);
+                }}
+              >
+                <label className={styles.label}>
+                  Código de 6 dígitos
+                  <input
+                    className={styles.input}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(event) => setOtpCode(event.target.value.replace(/\D/gu, ''))}
+                    placeholder="000000"
+                  />
+                </label>
+                <div className={styles.actions}>
+                  <Button type="submit" disabled={otpCode.length !== 6 || snapshot.authBusy}>
+                    <LogIn size={16} /> Confirmar código
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => void syncController.sendOtp(email)}
+                    disabled={snapshot.authBusy || otpCooldownSeconds > 0}
+                  >
+                    {otpCooldownSeconds > 0
+                      ? `Reenviar código (${otpCooldownSeconds}s)`
+                      : 'Reenviar código'}
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+          </div>
         ) : null}
 
         {snapshot.syncErrors.length > 0 ? (
@@ -154,7 +226,11 @@ export function CloudPage({ syncController = cloudSyncController }: CloudPagePro
           </div>
         ) : null}
 
-        {snapshot.magicLinkSent ? <p className={styles.success}>{snapshot.message}</p> : null}
+        {snapshot.magicLinkSent || (snapshot.otpSent && snapshot.status !== 'error') ? (
+          <p className={styles.success} role="status">
+            {snapshot.message}
+          </p>
+        ) : null}
         {snapshot.status === 'error' ? (
           <p className={styles.error} role="alert">
             {snapshot.message}
@@ -163,7 +239,10 @@ export function CloudPage({ syncController = cloudSyncController }: CloudPagePro
         {snapshot.status === 'offline' ? (
           <p className={styles.message}>{snapshot.message}</p>
         ) : null}
-        {snapshot.status === 'disconnected' && snapshot.message ? (
+        {snapshot.status === 'disconnected' &&
+        snapshot.message &&
+        !snapshot.magicLinkSent &&
+        !snapshot.otpSent ? (
           <p className={styles.message} role="status">
             {snapshot.message}
           </p>

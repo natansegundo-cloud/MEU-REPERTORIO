@@ -154,4 +154,51 @@ Depois disso, a homologação deve repetir os cenários de autenticação, leitu
 
 A arquitetura local e o núcleo de sincronização estão implementados e possuem cobertura automatizada controlada. A análise estática da migration indica uma política de isolamento adequada, e o endpoint anônimo não permitiu leitura de `v2_songs`.
 
-A homologação real da Etapa 13 **não está concluída** porque o build V2 não possui as variáveis `VITE_*` configuradas e não há uma conta de teste/inbox autorizada para executar autenticação e sincronização destrutiva controlada. O próximo passo depende dessa configuração externa; não avançar para uma nova etapa até repetir os testes reais e registrar seus resultados.
+A homologação real da Etapa 13 **não estava concluída naquele checkout** porque as variáveis `VITE_*` não estavam configuradas naquela execução e não havia uma conta de teste/inbox autorizada para executar autenticação e sincronização destrutiva controlada. O próximo passo dependia dessa configuração externa; não avançar para uma nova etapa até repetir os testes reais e registrar seus resultados.
+
+## Atualização da Etapa 17 — diagnóstico de conexão real
+
+O diagnóstico foi repetido em 08/11/2026. A situação da configuração local foi retificada: o checkout atual possui as variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` configuradas no `.env`, e elas não são versionadas.
+
+Foi feita uma sondagem somente de leitura, sem login, gravação ou registro de credenciais:
+
+- configurações do Auth: HTTP 200;
+- provedor de e-mail: habilitado;
+- confirmação automática: desabilitada;
+- leitura anônima de `v2_songs`: HTTP 401;
+- referências a `service_role` no código: nenhuma fora de documentação/configuração proibitiva.
+
+O resultado confirma que a URL e a chave publishable alcançam um projeto Supabase e que uma requisição anônima não leu a tabela. Ele não prova que a migration foi aplicada no projeto correto, não prova RLS entre usuários e não prova Magic Link ou sincronização autenticada.
+
+A homologação permanece bloqueada por falta de uma caixa de entrada/conta de teste autorizada e de confirmação externa de que `supabase/migrations/202611070001_v2_sync.sql` foi aplicada no projeto alvo. As instruções exatas estão em [`docs/SUPABASE_CONFIGURACAO.md`](SUPABASE_CONFIGURACAO.md).
+
+Não foram alterados Supabase remoto, migrations, parser, motor musical ou banco local.
+
+## Atualização da Etapa 18 — Google OAuth e OTP
+
+O fluxo de autenticação foi ampliado sobre o cliente Supabase existente, sem criar uma segunda instância, sistema paralelo ou armazenamento manual de tokens.
+
+### Implementado no frontend
+
+- Google OAuth por `signInWithOAuth({ provider: 'google' })`.
+- Retorno para `window.location.origin`, com `detectSessionInUrl` e `flowType: 'pkce'`.
+- OTP por e-mail com `signInWithOtp` e validação por `verifyOtp({ type: 'email' })`.
+- Entrada acessível de código de seis dígitos, estado de carregamento, mensagens de erro e bloqueio de reenvio por 30 segundos.
+- Magic Link preservado como alternativa.
+- Logout continua preservando IndexedDB e a sincronização só é iniciada depois de uma sessão válida.
+
+### Validação local executada
+
+- `npm run typecheck`: passou.
+- `npm run lint`: passou.
+- Testes direcionados do adaptador Supabase e da tela Nuvem: passaram, incluindo Google, OTP, código inválido/expirado, reenvio, logout e estados de erro.
+- `npm run validate`: passou; 30 arquivos Vitest e 161 testes, além de typecheck, lint e build de produção.
+- `npm run format:check`: passou.
+- `npm run test:e2e`: passou; 46 testes em Chromium desktop/mobile e WebKit simulado de iPhone/iPad.
+- `npm audit --omit=dev --audit-level=high`: passou, sem vulnerabilidades de produção encontradas.
+
+### Ainda não homologado
+
+Não houve login Google real, recebimento de OTP real, teste em Safari/PWA instalada no iPhone ou Android nesta etapa. Esses cenários dependem de habilitar o provider Google, configurar o template OTP, cadastrar redirect URLs e usar contas/inboxes de teste. Testes simulados e unitários não provam que o provider externo está funcional.
+
+As instruções de configuração estão em [`docs/SUPABASE_CONFIGURACAO.md`](SUPABASE_CONFIGURACAO.md) e o diagnóstico específico do armazenamento/sessão iOS está em [`docs/AUTH_IOS_PWA.md`](AUTH_IOS_PWA.md).

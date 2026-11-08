@@ -54,6 +54,8 @@ function makeBackend(response: { data: unknown; error: Error | null } = { data: 
   const auth = {
     getSession: vi.fn(),
     signInWithOtp: vi.fn().mockResolvedValue({ error: null }),
+    signInWithOAuth: vi.fn().mockResolvedValue({ error: null }),
+    verifyOtp: vi.fn().mockResolvedValue({ error: null }),
     signOut: vi.fn().mockResolvedValue({ error: null }),
     onAuthStateChange: vi.fn(() => ({
       data: { subscription: { unsubscribe: vi.fn() } },
@@ -80,12 +82,34 @@ describe('SupabaseBackend', () => {
       email: 'teste@example.com',
     });
     await backend.sendMagicLink('teste@example.com');
+    await backend.signInWithGoogle();
+    await backend.sendOtp('teste@example.com');
+    await backend.verifyOtp('teste@example.com', '123456');
     await backend.signOut();
 
     expect(auth.signInWithOtp).toHaveBeenCalledWith(
       expect.objectContaining({ email: 'teste@example.com' }),
     );
+    expect(auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    expect(auth.verifyOtp).toHaveBeenCalledWith({
+      email: 'teste@example.com',
+      token: '123456',
+      type: 'email',
+    });
     expect(auth.signOut).toHaveBeenCalledOnce();
+  });
+
+  it('converte código OTP inválido ou expirado em erro seguro', async () => {
+    const { backend, auth } = makeBackend();
+    auth.verifyOtp.mockResolvedValue({ error: new Error('Token has expired') });
+
+    await expect(backend.verifyOtp('teste@example.com', '123456')).rejects.toMatchObject({
+      name: 'SyncBackendError',
+      message: 'O código é inválido ou expirou. Solicite um novo código.',
+    });
   });
 
   it('faz pull paginado com cursor composto por updated_at e id', async () => {
