@@ -73,7 +73,7 @@ test('publica um manifest instalável com identidade e ícones válidos', async 
 
   await navigateTo(page, 'Ajustes');
   await expect(
-    page.getByRole('heading', { level: 2, name: 'Adicionar à Tela de Início' }),
+    page.getByRole('heading', { level: 3, name: 'Adicionar à Tela de Início' }),
   ).toBeVisible();
   await page.getByText('Como instalar pelo Safari').click();
   await expect(page.getByText('Toque em Compartilhar.')).toBeVisible();

@@ -90,6 +90,7 @@ describe('CloudPage', () => {
     const controller = new CloudSyncController(null);
     controllers.push(controller);
     render(<CloudPage syncController={controller} />);
+    expect(screen.getByRole('heading', { level: 3, name: 'Nuvem' })).toBeInTheDocument();
     expect(await screen.findByText('Indisponível')).toBeInTheDocument();
     expect(screen.getByText(/Configure as variáveis/)).toBeInTheDocument();
   });

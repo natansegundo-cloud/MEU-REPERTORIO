@@ -19,7 +19,15 @@ test('mantem a leitura focada e abre o diagrama sem deslocar a cifra', async ({ 
     await page.setViewportSize(viewport);
     await expect(page.getByRole('main', { name: /Conte.*Leitura compacta/ })).toBeVisible();
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      await page.evaluate(() => {
+        const browserGlobals = globalThis as unknown as {
+          document: { documentElement: { scrollWidth: number } };
+          window: { innerWidth: number };
+        };
+        return (
+          browserGlobals.document.documentElement.scrollWidth <= browserGlobals.window.innerWidth
+        );
+      }),
     ).toBe(true);
   }
   await page.setViewportSize({ width: 343, height: 648 });

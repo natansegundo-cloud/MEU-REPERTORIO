@@ -14,7 +14,6 @@ import {
 import { RepertoriesPage, RepertoryEditorPage } from '@/features/repertories';
 import { ShowModePage } from '@/features/show-mode';
 import { FavoritesPage } from '@/features/favorites/FavoritesPage';
-import { CloudPage } from '@/features/settings/CloudPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { useCloudSync } from '@/sync';
 import type { Song } from '@/types';
@@ -233,12 +232,7 @@ export function App() {
       />
     );
   } else if (activeSection === 'settings') {
-    content = (
-      <>
-        <SettingsPage />
-        <CloudPage />
-      </>
-    );
+    content = <SettingsPage />;
   } else {
     const placeholder = PLACEHOLDERS[activeSection as keyof typeof PLACEHOLDERS];
     content = (

@@ -1,6 +1,8 @@
 import { Share2, Smartphone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { SettingsCard } from '@/components/settings/SettingsCard';
+
 import styles from './InstallHelp.module.css';
 
 interface StandaloneNavigator extends Navigator {
@@ -29,19 +31,16 @@ export function InstallHelp() {
   }, []);
 
   return (
-    <section className={styles.panel} aria-labelledby="install-help-title">
-      <div className={styles.heading}>
-        <Smartphone size={21} aria-hidden="true" />
-        <div>
-          <h2 id="install-help-title">Adicionar à Tela de Início</h2>
-          <p>
-            {isStandalone
-              ? 'O aplicativo está aberto no modo instalado.'
-              : 'No iPhone ou iPad, use o Safari para adicionar este aplicativo à Tela de Início.'}
-          </p>
-        </div>
-      </div>
-
+    <SettingsCard
+      id="install-help-title"
+      icon={Smartphone}
+      title="Adicionar à Tela de Início"
+      description={
+        isStandalone
+          ? 'O aplicativo está aberto no modo instalado.'
+          : 'No iPhone ou iPad, use o Safari para adicionar este aplicativo à Tela de Início.'
+      }
+    >
       <details className={styles.details}>
         <summary>
           <Share2 size={16} aria-hidden="true" /> Como instalar pelo Safari
@@ -57,6 +56,6 @@ export function InstallHelp() {
           do Safari.
         </p>
       </details>
-    </section>
+    </SettingsCard>
   );
 }

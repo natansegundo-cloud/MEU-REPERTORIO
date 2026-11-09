@@ -34,6 +34,11 @@ async function downloadContent(
 test('exporta e restaura um backup completo pela tela de ajustes', async ({ page }) => {
   await importSong(page, 'Backup de teste', 'Tom: C\nC G\nLetra original');
   await navigateTo(page, 'Ajustes');
+  await expect(page.getByRole('heading', { level: 1, name: 'Preferências' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Dados' })).toBeVisible();
+  await expect(page.getByText('Sobre o formato do backup').locator('..')).not.toHaveAttribute(
+    'open',
+  );
 
   const exported = await downloadContent(page, 'Exportar biblioteca');
   expect(exported.name).toMatch(/^meu-repertorio-backup-\d{4}-\d{2}-\d{2}\.json$/);

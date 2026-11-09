@@ -1,6 +1,7 @@
 import { Archive, Download, FileJson, RefreshCw, Upload } from 'lucide-react';
 import { useState, type ChangeEvent } from 'react';
 
+import { SettingsCard } from '@/components/settings/SettingsCard';
 import { Button } from '@/components/ui/Button';
 import {
   createBackup,
@@ -139,15 +140,12 @@ export function BackupPanel() {
   }
 
   return (
-    <section className={styles.panel} aria-labelledby="backup-title">
-      <div className={styles.heading}>
-        <Archive size={21} aria-hidden="true" />
-        <div>
-          <h2 id="backup-title">Backup e restauração</h2>
-          <p>Proteja sua biblioteca local sem depender de internet ou da nuvem.</p>
-        </div>
-      </div>
-
+    <SettingsCard
+      id="backup-title"
+      icon={Archive}
+      title="Backup e restauração"
+      description="Proteja sua biblioteca local sem depender de internet ou da nuvem."
+    >
       <div className={styles.actions}>
         <Button onClick={() => void handleExport()} disabled={isExporting || isRestoring}>
           <Download size={16} />
@@ -164,14 +162,16 @@ export function BackupPanel() {
         </label>
       </div>
 
-      <div className={styles.info}>
-        <FileJson size={18} aria-hidden="true" />
+      <details className={styles.info}>
+        <summary>
+          <FileJson size={18} aria-hidden="true" /> Sobre o formato do backup
+        </summary>
         <p>
           Formato JSON versionado (v1), com verificação SHA-256. O arquivo inclui músicas,
           repertórios, relações, favoritos e preferências. Tokens, sessões e chaves de sincronização
           não entram no backup.
         </p>
-      </div>
+      </details>
 
       {preview ? (
         <div className={styles.preview} aria-label="Prévia do backup">
@@ -262,6 +262,6 @@ export function BackupPanel() {
           {errorMessage}
         </p>
       ) : null}
-    </section>
+    </SettingsCard>
   );
 }

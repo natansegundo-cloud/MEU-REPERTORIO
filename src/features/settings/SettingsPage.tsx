@@ -2,10 +2,12 @@ import { HardDrive } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { PageHeader } from '@/components/layout/PageHeader';
+import { SettingsCard } from '@/components/settings/SettingsCard';
 import { InstallHelp } from '@/components/system/InstallHelp';
 import { requestPersistentStorage, type StoragePersistenceStatus } from '@/services';
 
 import { BackupPanel } from './BackupPanel';
+import { CloudPage } from './CloudPage';
 import styles from './SettingsPage.module.css';
 
 export function SettingsPage() {
@@ -23,26 +25,48 @@ export function SettingsPage() {
         description="Informações do aplicativo e proteção dos dados locais."
       />
 
-      <section className={styles.panel} aria-labelledby="local-data-title">
-        <div className={styles.heading}>
-          <HardDrive size={21} aria-hidden="true" />
-          <div>
-            <h2 id="local-data-title">Versão e armazenamento</h2>
-            <p>Versão {__APP_VERSION__}</p>
-          </div>
+      <section className={styles.section} aria-labelledby="data-section-title">
+        <h2 id="data-section-title" className={styles.sectionTitle}>
+          Dados
+        </h2>
+        <div className={styles.cards}>
+          <SettingsCard
+            id="local-data-title"
+            icon={HardDrive}
+            title="Versão e armazenamento"
+            description={`Versão ${__APP_VERSION__}`}
+          >
+            <p className={styles.storage} role="status">
+              {storageStatus === 'persisted'
+                ? 'O armazenamento local está protegido contra limpeza automática.'
+                : storageStatus === 'not-persisted'
+                  ? 'O navegador ainda não garantiu que os dados não serão apagados.'
+                  : storageStatus === 'unsupported'
+                    ? 'O navegador não oferece proteção persistente para os dados locais.'
+                    : 'Verificando a proteção dos dados locais…'}
+            </p>
+          </SettingsCard>
+          <BackupPanel />
         </div>
-        <p className={styles.storage} role="status">
-          {storageStatus === 'persisted'
-            ? 'O armazenamento local está protegido contra limpeza automática.'
-            : storageStatus === 'not-persisted'
-              ? 'O navegador ainda não garantiu que os dados não serão apagados.'
-              : storageStatus === 'unsupported'
-                ? 'O navegador não oferece proteção persistente para os dados locais.'
-                : 'Verificando a proteção dos dados locais…'}
-        </p>
       </section>
-      <InstallHelp />
-      <BackupPanel />
+
+      <section className={styles.section} aria-labelledby="installation-section-title">
+        <h2 id="installation-section-title" className={styles.sectionTitle}>
+          Instalação
+        </h2>
+        <div className={styles.cards}>
+          <InstallHelp />
+        </div>
+      </section>
+
+      <section className={styles.section} aria-labelledby="cloud-section-title">
+        <h2 id="cloud-section-title" className={styles.sectionTitle}>
+          Nuvem e conta
+        </h2>
+        <div className={styles.cards}>
+          <CloudPage />
+        </div>
+      </section>
     </div>
   );
 }
