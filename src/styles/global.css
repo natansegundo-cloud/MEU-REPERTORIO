@@ -72,9 +72,9 @@ select {
   font: inherit;
 }
 
-input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
-textarea,
-select {
+:where(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])),
+:where(textarea),
+:where(select) {
   min-height: var(--control-height-md);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
@@ -86,15 +86,19 @@ select {
     background-color var(--transition-fast);
 }
 
-input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):hover,
-textarea:hover,
-select:hover {
+:where(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])
+):hover,
+:where(textarea):hover,
+:where(select):hover {
   border-color: var(--color-text-subtle);
 }
 
-input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus,
-textarea:focus,
-select:focus {
+:where(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])
+):focus,
+:where(textarea):focus,
+:where(select):focus {
   border-color: var(--color-focus);
   box-shadow: var(--focus-ring);
   outline: 0;

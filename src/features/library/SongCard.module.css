@@ -2,9 +2,8 @@
   display: flex;
   align-items: stretch;
   min-width: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
   transition:
     border-color var(--transition-fast),
     background-color var(--transition-fast);
@@ -13,16 +12,17 @@
 .card:hover {
   border-color: var(--color-border-strong);
   background: var(--color-surface-interactive);
+  border-radius: var(--radius-md);
 }
 
 .mainAction {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   flex: 1;
   min-width: 0;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-2);
   border: 0;
   border-radius: inherit;
   background: transparent;
@@ -32,8 +32,8 @@
 .icon {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   color: var(--color-accent-strong);
 }
 
@@ -52,17 +52,16 @@
 
 .title {
   font-size: var(--text-base);
+  line-height: var(--leading-tight);
 }
 
 .artist {
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
 }
 
 .key {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-muted);
+  padding: 0;
   color: var(--color-text-muted);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -75,7 +74,7 @@
   align-self: center;
   width: 2.75rem;
   height: 2.75rem;
-  margin-right: var(--space-2);
+  margin-right: var(--space-1);
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
@@ -91,11 +90,16 @@
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-accent);
+  color: var(--color-text-subtle);
 }
 
 .favorite:hover {
   background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.favorite[aria-pressed='true'] {
+  color: var(--color-accent-strong);
 }
 
 .delete:hover {
@@ -105,13 +109,13 @@
 
 @media (max-width: 520px) {
   .mainAction {
-    gap: var(--space-3);
-    padding-inline: var(--space-3);
+    gap: var(--space-2);
+    padding-inline: 0;
   }
 
   .icon {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 1.5rem;
+    height: 1.5rem;
   }
 
   .key {
