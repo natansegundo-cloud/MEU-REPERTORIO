@@ -46,6 +46,13 @@ figure {
   margin: 0;
 }
 
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
 ul,
 ol {
   padding: 0;
@@ -63,6 +70,34 @@ textarea,
 select {
   color: inherit;
   font: inherit;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+textarea,
+select {
+  min-height: var(--control-height-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):hover,
+textarea:hover,
+select:hover {
+  border-color: var(--color-text-subtle);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-focus);
+  box-shadow: var(--focus-ring);
+  outline: 0;
 }
 
 button {

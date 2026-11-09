@@ -7,7 +7,6 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
 }
 
 .header {
@@ -23,9 +22,9 @@
   width: 2.25rem;
   height: 2.25rem;
   place-items: center;
-  border: 1px solid var(--color-accent-soft);
+  border: 0;
   border-radius: var(--radius-md);
-  background: var(--color-accent-soft);
+  background: transparent;
   color: var(--color-accent-strong);
 }
 
