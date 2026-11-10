@@ -1,10 +1,10 @@
-import { Heart, Library, Plus, Search } from 'lucide-react';
+import { Heart, Library, Search } from 'lucide-react';
 import { useState } from 'react';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { Button } from '@/components/ui/Button';
 import { softDeleteSong, toggleFavorite } from '@/services';
 
+import { LibraryActionMenu } from './LibraryActionMenu';
 import { useSongs } from './useSongs';
 import { SongCard } from './SongCard';
 import { useFavoriteIds } from './useFavorites';
@@ -14,7 +14,9 @@ import styles from './LibraryPage.module.css';
 interface LibraryPageProps {
   readonly notice: string | null;
   readonly onDismissNotice: () => void;
-  readonly onImport: () => void;
+  readonly onAddSong: () => void;
+  readonly onImportBatch: () => void;
+  readonly onCreateRepertory: () => void;
   readonly onOpenSong: (id: string) => void;
   readonly onOpenRepertories: () => void;
 }
@@ -22,7 +24,9 @@ interface LibraryPageProps {
 export function LibraryPage({
   notice,
   onDismissNotice,
-  onImport,
+  onAddSong,
+  onImportBatch,
+  onCreateRepertory,
   onOpenSong,
   onOpenRepertories,
 }: LibraryPageProps) {
@@ -53,10 +57,6 @@ export function LibraryPage({
           <h1 className={styles.title}>Biblioteca</h1>
           <p className={styles.description}>Suas músicas, cifras e letras disponíveis offline.</p>
         </div>
-        <Button onClick={onImport}>
-          <Plus size={17} />
-          Importar música
-        </Button>
       </header>
 
       <LibraryTabs
@@ -135,6 +135,12 @@ export function LibraryPage({
           ))}
         </div>
       ) : null}
+
+      <LibraryActionMenu
+        onAddSong={onAddSong}
+        onImportBatch={onImportBatch}
+        onCreateRepertory={onCreateRepertory}
+      />
     </div>
   );
 }

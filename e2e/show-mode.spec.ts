@@ -1,14 +1,19 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { navigateTo } from './navigation';
+import { navigateTo, selectLibraryAction } from './navigation';
 
 interface ViewportWindow {
   readonly innerWidth: number;
+  readonly scrollY: number;
   readonly document: { readonly documentElement: { readonly scrollWidth: number } };
 }
 
+function getScrollY(page: Page): Promise<number> {
+  return page.evaluate(() => (globalThis as unknown as ViewportWindow).scrollY);
+}
+
 async function importSong(page: Page, title: string, content: string) {
-  await page.getByRole('button', { name: /Importar m/ }).click();
+  await selectLibraryAction(page, 'Adicionar música');
   await page.getByLabel(/título/i).fill(title);
   await page.getByLabel(/letra e cifras/i).fill(content);
   await page.getByRole('button', { name: /Importar m/ }).click();
@@ -95,4 +100,36 @@ test('funciona em viewport estreita e aceita gesto horizontal', async ({ page })
       return pageWindow.document.documentElement.scrollWidth <= pageWindow.innerWidth;
     }),
   ).toBe(true);
+});
+
+test('controla a rolagem pela barra persistente sem perder a posição', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const longSong = Array.from({ length: 80 }, (_, index) =>
+    index % 2 === 0 ? `Verso ${index + 1}` : 'G                 D',
+  ).join('\n');
+  await importSong(page, 'Rolagem A', longSong);
+  await importSong(page, 'Rolagem B', 'Tom: D\nD\nLetra B');
+  await createShow(page);
+  await page.getByRole('button', { name: 'Tocar' }).click();
+
+  const startButton = page.getByRole('button', { name: 'Iniciar rolagem' });
+  await expect(startButton).toBeVisible();
+  await startButton.click();
+  await expect(page.getByRole('button', { name: 'Pausar rolagem' })).toBeVisible();
+  await page.waitForTimeout(350);
+  const runningPosition = await getScrollY(page);
+  expect(runningPosition).toBeGreaterThan(0);
+
+  await page.getByRole('button', { name: 'Pausar rolagem' }).click();
+  const pausedPosition = await getScrollY(page);
+  await page.waitForTimeout(250);
+  expect(await getScrollY(page)).toBe(pausedPosition);
+
+  const speed = page.getByRole('slider', { name: 'Velocidade da rolagem' });
+  await speed.fill('80');
+  await expect(page.getByText('80 px/s', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Iniciar rolagem' }).click();
+  await page.waitForTimeout(350);
+  expect(await getScrollY(page)).toBeGreaterThan(pausedPosition);
 });

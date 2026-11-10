@@ -2,11 +2,11 @@ import { readFile } from 'node:fs/promises';
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { navigateTo } from './navigation';
+import { navigateTo, selectLibraryAction } from './navigation';
 
 async function importSong(page: Page, title: string, content: string): Promise<void> {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Importar música' }).click();
+  await selectLibraryAction(page, 'Adicionar música');
   await page.getByLabel(/título/i).fill(title);
   await page.getByLabel(/letra e cifras/i).fill(content);
   await page.getByRole('button', { name: 'Importar música' }).click();

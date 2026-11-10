@@ -177,9 +177,18 @@ export function App() {
       <LibraryPage
         notice={notice}
         onDismissNotice={() => setNotice(null)}
-        onImport={() => {
+        onAddSong={() => {
           setNotice(null);
           setLibraryScreen('import');
+        }}
+        onImportBatch={() => {
+          setNotice(null);
+          setLibraryScreen('batch-import');
+        }}
+        onCreateRepertory={() => {
+          setActiveSection('repertories');
+          setRepertoryScreen('list');
+          setSelectedRepertoryId(null);
         }}
         onOpenSong={(id) => {
           setSelectedSongId(id);

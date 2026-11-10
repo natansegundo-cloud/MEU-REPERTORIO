@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+import { selectLibraryAction } from './navigation';
+
 test('mantem a leitura focada e abre o diagrama sem deslocar a cifra', async ({ page }) => {
   await page.setViewportSize({ width: 343, height: 648 });
   await page.goto('/');
-  await page.getByRole('button', { name: /Importar/ }).click();
+  await selectLibraryAction(page, 'Adicionar música');
   await page.getByLabel(/t.*tulo/i).fill('Leitura compacta');
   await page.getByLabel(/letra e cifras/i).fill('Tom: C\nC       G\nMinha letra');
   await page.getByRole('button', { name: /Importar/ }).click();

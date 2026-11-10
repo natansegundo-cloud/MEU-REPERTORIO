@@ -2,6 +2,7 @@
   display: grid;
   align-content: start;
   gap: var(--space-4);
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
 }
 
 .tabs {

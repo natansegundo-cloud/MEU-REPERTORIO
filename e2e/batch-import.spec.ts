@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
 
+import { selectLibraryAction } from './navigation';
+
 test('abre a revisão de importação em lote e informa DOCX inválido', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Importar música' }).click();
-  await page.getByRole('button', { name: /importação em lote/ }).click();
+  await selectLibraryAction(page, 'Importar em lote');
   await expect(page.getByRole('heading', { name: 'Importar músicas em lote' })).toBeVisible();
 
   await page.locator('input[type="file"]').setInputFiles({

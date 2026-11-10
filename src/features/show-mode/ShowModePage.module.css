@@ -2,7 +2,7 @@
   min-height: 100dvh;
   padding-top: max(var(--space-4), env(safe-area-inset-top));
   padding-right: max(clamp(var(--space-4), 4vw, var(--space-10)), env(safe-area-inset-right));
-  padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(8rem + env(safe-area-inset-bottom));
   padding-left: max(clamp(var(--space-4), 4vw, var(--space-10)), env(safe-area-inset-left));
   background: var(--color-bg);
   color: var(--color-text);
@@ -171,6 +171,69 @@
   backdrop-filter: blur(14px);
 }
 
+.scrollControl {
+  position: absolute;
+  right: max(var(--space-4), env(safe-area-inset-right));
+  bottom: calc(100% + var(--space-2));
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 3rem;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-surface-raised) 96%, transparent);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(14px);
+}
+
+.scrollToggle {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.scrollToggle:hover {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.scrollSpeed {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 0 var(--space-2);
+  min-width: 8.5rem;
+  padding: 0 var(--space-2);
+}
+
+.scrollLabel {
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scrollValue {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-align: right;
+}
+
+.scrollSpeed input {
+  grid-column: 1 / -1;
+  width: clamp(6rem, 12vw, 8rem);
+  accent-color: var(--color-accent);
+}
+
 .navigation button {
   max-width: min(30vw, 14rem);
   border-color: var(--color-border);
@@ -298,6 +361,12 @@
   }
   .navigation {
     justify-content: space-between;
+  }
+
+  .scrollControl {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
   }
   .navigation button {
     max-width: 38vw;

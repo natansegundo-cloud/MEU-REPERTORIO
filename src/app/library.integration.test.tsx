@@ -7,6 +7,11 @@ import { importSong } from '@/services';
 
 import { App } from './App';
 
+async function openSongImport(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(await screen.findByRole('button', { name: 'Adicionar conteúdo' }));
+  await user.click(await screen.findByRole('menuitem', { name: 'Adicionar música' }));
+}
+
 beforeEach(async () => {
   if (db.isOpen()) db.close();
   await db.delete();
@@ -25,7 +30,7 @@ describe('library integration', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<App />);
 
-    await user.click(await screen.findByRole('button', { name: 'Importar música' }));
+    await openSongImport(user);
     expect(await screen.findByRole('heading', { name: 'Importar cifra' })).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/título/i), 'Uma Vez Mais');
@@ -64,7 +69,7 @@ describe('library integration', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole('button', { name: 'Importar música' }));
+    await openSongImport(user);
     await user.type(screen.getByLabelText(/título/i), 'Música editável');
     await user.type(screen.getByLabelText(/letra e cifras/i), 'C\nLetra original');
     await user.click(screen.getByRole('button', { name: 'Importar música' }));
@@ -90,7 +95,7 @@ describe('library integration', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<App />);
 
-    await user.click(await screen.findByRole('button', { name: 'Importar música' }));
+    await openSongImport(user);
     await user.type(screen.getByLabelText(/letra e cifras/i), 'C\nLetra');
     await user.click(screen.getByRole('button', { name: 'Importar música' }));
     await user.click(within(await screen.findByTestId('song-card')).getAllByRole('button')[0]!);

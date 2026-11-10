@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+import { selectLibraryAction } from './navigation';
+
 test('importa, pesquisa, abre e mantém uma música após recarregar', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('button', { name: 'Importar música' }).click();
+  await selectLibraryAction(page, 'Adicionar música');
   await page.getByLabel(/título/i).fill('Uma Vez Mais');
   await page.getByLabel(/artista/i).fill('Natiruts');
   await page.getByLabel(/letra e cifras/i).fill('Tom: A\nA7M        E/G#\nMinha letra');
@@ -22,9 +24,30 @@ test('importa, pesquisa, abre e mantém uma música após recarregar', async ({ 
   await expect(page.getByText('Uma Vez Mais')).toBeVisible();
 });
 
+test('mantém as ações de adição acessíveis na Biblioteca', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Adicionar conteúdo' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Adicionar música' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Importar em lote' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Criar repertório' })).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menuitem', { name: 'Adicionar música' })).toBeHidden();
+
+  await page.getByRole('button', { name: 'Adicionar conteúdo' }).click();
+  await page.getByRole('heading', { name: 'Biblioteca', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: 'Adicionar música' })).toBeHidden();
+
+  await page.getByRole('button', { name: 'Adicionar conteúdo' }).click();
+  await page.getByRole('menuitem', { name: 'Criar repertório' }).click();
+  await expect(page.getByRole('heading', { name: 'Repertórios' })).toBeVisible();
+  await expect(page.getByLabel('Novo repertório')).toBeVisible();
+});
+
 test('exibe diagnóstico impeditivo e não salva entrada vazia', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Importar música' }).click();
+  await selectLibraryAction(page, 'Adicionar música');
   await page.getByLabel(/letra e cifras/i).fill('Tom: A');
   await page.getByRole('button', { name: 'Importar música' }).click();
 
@@ -34,7 +57,7 @@ test('exibe diagnóstico impeditivo e não salva entrada vazia', async ({ page }
 
 test('edita uma música, salva o tom preferido e reabre a versão persistida', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Importar música' }).click();
+  await selectLibraryAction(page, 'Adicionar música');
   await page.getByLabel(/título/i).fill('Música editável');
   await page.getByLabel(/letra e cifras/i).fill('Tom: C\nC\nLetra original');
   await page.getByRole('button', { name: 'Importar música' }).click();

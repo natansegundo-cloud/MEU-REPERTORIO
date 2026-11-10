@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+import { selectLibraryAction } from './navigation';
+
 test('importa TXT, revisa o conteudo e salva a cifra', async ({ page }) => {
   const title = `Cifra TXT ${Date.now()}`;
   await page.goto('/');
 
-  await page.getByRole('button', { name: /Importar/ }).click();
+  await selectLibraryAction(page, 'Adicionar música');
   const fileInput = page.locator('input[type="file"]');
   await fileInput.setInputFiles({
     name: 'petala.txt',

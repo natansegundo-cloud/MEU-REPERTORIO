@@ -31,6 +31,7 @@ import {
   type PlayableEntry,
   type ShowSession,
 } from './show-session';
+import { createScrollController, type ScrollController } from './scroll-controller';
 import {
   releaseScreenWakeLock,
   requestScreenWakeLock,
@@ -95,6 +96,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
   const [toneStatus, setToneStatus] = useState<string | null>(null);
   const [exitPending, setExitPending] = useState(false);
   const autoScrollingUntil = useRef(0);
+  const scrollController = useRef<ScrollController | null>(null);
   const wakeLock = useRef<WakeLockHandle | null>(null);
   const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
   const [positionLoaded, setPositionLoaded] = useState(false);
@@ -205,23 +207,34 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
   }, [session]);
 
   useEffect(() => {
-    if (!autoScroll) return;
-    let frame = 0;
-    let previous = performance.now();
-    function tick(now: number): void {
-      const delta = Math.min(80, now - previous);
-      previous = now;
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      if (window.scrollY >= maxScroll - 2) {
-        setAutoScroll(false);
-        return;
-      }
-      autoScrollingUntil.current = now + 80;
-      window.scrollBy(0, (scrollSpeed * delta) / 1000);
-      frame = requestAnimationFrame(tick);
-    }
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    const controller = createScrollController(
+      {
+        now: () => performance.now(),
+        requestFrame: (callback) => requestAnimationFrame(callback),
+        cancelFrame: (frame) => cancelAnimationFrame(frame),
+        getScrollTop: () => window.scrollY,
+        getMaxScroll: () => document.documentElement.scrollHeight - window.innerHeight,
+        scrollBy: (top) => {
+          autoScrollingUntil.current = performance.now() + 80;
+          window.scrollBy(0, top);
+        },
+      },
+      DEFAULT_SPEED,
+      () => setAutoScroll(false),
+    );
+    scrollController.current = controller;
+    return () => {
+      controller.stop();
+      scrollController.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const controller = scrollController.current;
+    if (!controller) return;
+    controller.setSpeed(scrollSpeed);
+    if (autoScroll) controller.start();
+    else controller.stop();
   }, [autoScroll, scrollSpeed]);
 
   useEffect(() => {
@@ -455,28 +468,9 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
             </div>
           </div>
           <div className={styles.controlGroup}>
-            <label htmlFor="show-scroll-speed">Rolagem: {scrollSpeed} px/s</label>
-            <input
-              id="show-scroll-speed"
-              type="range"
-              min="20"
-              max="100"
-              step="5"
-              value={scrollSpeed}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-                setScrollSpeed(value);
-                void setPreference(SPEED_KEY, value);
-              }}
-            />
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setAutoScroll((running) => !running)}
-            >
-              {autoScroll ? <Pause size={15} /> : <Play size={15} />}{' '}
-              {autoScroll ? 'Pausar' : 'Rolar'}
-            </Button>
+            <span>Rolagem automática</span>
+            <strong>{scrollSpeed} px/s</strong>
+            <small>Ajuste na barra fixa da apresentação.</small>
           </div>
           <label className={styles.switchRow}>
             <input
@@ -521,6 +515,36 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
       ) : null}
 
       <nav className={styles.navigation} aria-label="Navegação do modo show">
+        <div className={styles.scrollControl} role="group" aria-label="Controle de rolagem">
+          <button
+            className={styles.scrollToggle}
+            type="button"
+            aria-label={autoScroll ? 'Pausar rolagem' : 'Iniciar rolagem'}
+            aria-pressed={autoScroll}
+            onClick={() => setAutoScroll((running) => !running)}
+          >
+            {autoScroll ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+          <label className={styles.scrollSpeed}>
+            <span className={styles.scrollLabel}>Rolagem</span>
+            <span className={styles.scrollValue} aria-live="polite">
+              {scrollSpeed} px/s
+            </span>
+            <input
+              type="range"
+              min="20"
+              max="100"
+              step="5"
+              value={scrollSpeed}
+              aria-label="Velocidade da rolagem"
+              onChange={(event) => {
+                const value = Number(event.target.value);
+                setScrollSpeed(value);
+                void setPreference(SPEED_KEY, value);
+              }}
+            />
+          </label>
+        </div>
         <button type="button" onClick={() => move(-1)} disabled={!previousAvailable}>
           <ChevronLeft size={20} /> <span>Anterior</span>
         </button>
