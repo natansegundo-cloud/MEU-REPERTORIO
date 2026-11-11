@@ -60,12 +60,14 @@ export function LibraryActionMenu({
         role="menu"
         aria-label="Adicionar conteúdo"
         aria-hidden={!open}
+        inert={!open}
       >
         <button
           ref={firstItemRef}
           className={styles.menuItem}
           type="button"
           role="menuitem"
+          tabIndex={open ? undefined : -1}
           onClick={() => runAction(onAddSong)}
         >
           <Music2 size={17} aria-hidden="true" />
@@ -75,6 +77,7 @@ export function LibraryActionMenu({
           className={styles.menuItem}
           type="button"
           role="menuitem"
+          tabIndex={open ? undefined : -1}
           onClick={() => runAction(onImportBatch)}
         >
           <FileStack size={17} aria-hidden="true" />
@@ -84,6 +87,7 @@ export function LibraryActionMenu({
           className={styles.menuItem}
           type="button"
           role="menuitem"
+          tabIndex={open ? undefined : -1}
           onClick={() => runAction(onCreateRepertory)}
         >
           <ListMusic size={17} aria-hidden="true" />

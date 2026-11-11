@@ -12,13 +12,14 @@ import {
   SunMedium,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react';
 
 import { ChordDiagram } from '@/components/music';
 import { Button } from '@/components/ui/Button';
 import { transposeParsedSong } from '@/features/parser';
 import { getPreference, setPreference, updateRepertoryItemKey } from '@/services';
 import type { JsonValue } from '@/types';
+import { lockBodyScroll } from '@/utils/scroll-lock';
 
 import { SongSheet } from '@/features/songs';
 import { baseSongStructure, keyForShift, keyShift, keySpelling } from '@/features/songs/display';
@@ -62,13 +63,21 @@ function positionKey(repertoryId: string): string {
   return `${POSITION_PREFIX}${repertoryId}.position`;
 }
 
-function isTextInput(target: EventTarget | null): boolean {
+const INTERACTIVE_SELECTOR =
+  'button, a, input, textarea, select, label, [role="button"], [role="slider"], [contenteditable="true"], [data-no-swipe="true"]';
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest(INTERACTIVE_SELECTOR));
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
     (target.tagName === 'INPUT' ||
       target.tagName === 'TEXTAREA' ||
       target.tagName === 'SELECT' ||
-      target.isContentEditable)
+      target.isContentEditable ||
+      Boolean(target.closest('button, a, [role="button"], [role="slider"]')))
   );
 }
 
@@ -99,6 +108,8 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
   const scrollController = useRef<ScrollController | null>(null);
   const wakeLock = useRef<WakeLockHandle | null>(null);
   const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
+  const trackSheetRef = useRef<HTMLElement>(null);
+  const trackListTriggerRef = useRef<HTMLButtonElement>(null);
   const [positionLoaded, setPositionLoaded] = useState(false);
 
   useEffect(() => {
@@ -170,7 +181,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
   useEffect(() => {
     if (currentEntry) {
       const nextHash = `#show/${encodeURIComponent(repertoryId)}/${encodeURIComponent(currentEntry.item.id)}`;
-      window.history.replaceState({ show: true }, '', nextHash);
+      window.history.replaceState({ ...(window.history.state ?? {}), show: true }, '', nextHash);
       void setPreference(positionKey(repertoryId), {
         itemId: currentEntry.item.id,
         index: session?.index ?? 0,
@@ -180,7 +191,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
-      if (isTextInput(event.target)) return;
+      if (exitPending || trackListOpen || isTypingTarget(event.target)) return;
       if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
         event.preventDefault();
         if (session && canMoveShowSession(session, -1)) {
@@ -204,7 +215,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [session]);
+  }, [exitPending, session, trackListOpen]);
 
   useEffect(() => {
     const controller = createScrollController(
@@ -215,7 +226,8 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
         getScrollTop: () => window.scrollY,
         getMaxScroll: () => document.documentElement.scrollHeight - window.innerHeight,
         scrollBy: (top) => {
-          autoScrollingUntil.current = performance.now() + 80;
+          // Ignora o evento de scroll gerado pelo próprio controlador.
+          autoScrollingUntil.current = performance.now() + 180;
           window.scrollBy(0, top);
         },
       },
@@ -241,15 +253,73 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
     function pauseForManualScroll(): void {
       if (performance.now() > autoScrollingUntil.current) setAutoScroll(false);
     }
+    function pauseForManualTouch(event: TouchEvent): void {
+      if (isInteractiveTarget(event.target)) return;
+      setAutoScroll(false);
+    }
+    // Não usamos touchstart: tocar em controles não deve pausar a rolagem.
+    // O scroll cobre roda, teclado e barra; o touchmove cobre o arrasto manual,
+    // que não pode ser distinguido pelo scroll durante a rolagem programática.
     window.addEventListener('wheel', pauseForManualScroll, { passive: true });
-    window.addEventListener('touchstart', pauseForManualScroll, { passive: true });
     window.addEventListener('scroll', pauseForManualScroll, { passive: true });
+    window.addEventListener('touchmove', pauseForManualTouch, { passive: true });
     return () => {
       window.removeEventListener('wheel', pauseForManualScroll);
-      window.removeEventListener('touchstart', pauseForManualScroll);
       window.removeEventListener('scroll', pauseForManualScroll);
+      window.removeEventListener('touchmove', pauseForManualTouch);
     };
   }, []);
+
+  useEffect(() => {
+    if (!exitPending) return undefined;
+    document.querySelector<HTMLButtonElement>('[data-exit-continue="true"]')?.focus();
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setExitPending(false);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [exitPending]);
+
+  useEffect(() => {
+    if (!trackListOpen) return undefined;
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const listTrigger = trackListTriggerRef.current;
+    const releaseScrollLock = lockBodyScroll();
+    const sheet = trackSheetRef.current;
+    const firstFocusable = sheet?.querySelector<HTMLElement>('button:not(:disabled)');
+    firstFocusable?.focus();
+
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setTrackListOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab' || !sheet) return;
+      const focusable = [...sheet.querySelectorAll<HTMLElement>('button:not(:disabled)')];
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      releaseScrollLock();
+      if (listTrigger?.isConnected) listTrigger.focus();
+      else if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
+  }, [trackListOpen]);
 
   useEffect(() => {
     const navigatorWithWakeLock = navigator as WakeLockProvider;
@@ -271,8 +341,31 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
     };
   }, []);
 
+  function handleReadingTouchStart(event: ReactTouchEvent<HTMLDivElement>): void {
+    if (event.touches.length !== 1 || isInteractiveTarget(event.target)) {
+      touchStart.current = null;
+      return;
+    }
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    touchStart.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+  }
+
+  function handleReadingTouchEnd(event: ReactTouchEvent<HTMLDivElement>): void {
+    const touch = event.changedTouches[0];
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!touch || !start) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Date.now() - start.time < 700 && Math.abs(dx) > 64 && Math.abs(dx) > Math.abs(dy) * 1.35) {
+      move(dx < 0 ? 1 : -1);
+    }
+  }
+
   function move(direction: -1 | 1): void {
     if (!session || !canMoveShowSession(session, direction)) return;
+    scrollController.current?.stop();
     const next = moveShowSession(session, direction);
     setCurrentItemId(next.entries[next.index]?.item.id ?? null);
     setAutoScroll(false);
@@ -283,6 +376,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
 
   function jump(index: number): void {
     if (!session) return;
+    scrollController.current?.stop();
     const next = jumpShowSession(session, index);
     setCurrentItemId(next.entries[next.index]?.item.id ?? null);
     setTrackListOpen(false);
@@ -335,28 +429,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
   const previousAvailable = canMoveShowSession(session, -1);
   const nextAvailable = canMoveShowSession(session, 1);
   return (
-    <div
-      className={styles.page}
-      onTouchStart={(event) => {
-        const touch = event.changedTouches[0];
-        if (touch) touchStart.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
-      }}
-      onTouchEnd={(event) => {
-        const touch = event.changedTouches[0];
-        const start = touchStart.current;
-        touchStart.current = null;
-        if (!touch || !start) return;
-        const dx = touch.clientX - start.x;
-        const dy = touch.clientY - start.y;
-        if (
-          Date.now() - start.time < 700 &&
-          Math.abs(dx) > 64 &&
-          Math.abs(dx) > Math.abs(dy) * 1.35
-        ) {
-          move(dx < 0 ? 1 : -1);
-        }
-      }}
-    >
+    <div className={styles.page}>
       <header className={styles.topbar}>
         <button className={styles.exit} type="button" onClick={() => setExitPending(true)}>
           <ArrowLeft size={16} /> Sair
@@ -382,7 +455,12 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
       {exitPending ? (
         <div className={styles.confirmExit} role="group" aria-label="Confirmar saída do modo show">
           <span>Sair do modo show?</span>
-          <Button size="sm" variant="ghost" onClick={() => setExitPending(false)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            data-exit-continue="true"
+            onClick={() => setExitPending(false)}
+          >
             Continuar
           </Button>
           <Button size="sm" variant="secondary" onClick={onExit}>
@@ -506,12 +584,22 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
       ) : null}
 
       {displayedStructure ? (
-        <SongSheet
-          structure={displayedStructure}
-          title={currentSong?.title ?? 'Música'}
-          fontScale={fontScale}
-          {...(diagramsEnabled ? { onChordSelect: setDiagramSymbol } : {})}
-        />
+        <div
+          className={styles.reading}
+          data-testid="show-reading"
+          onTouchStart={handleReadingTouchStart}
+          onTouchEnd={handleReadingTouchEnd}
+          onTouchCancel={() => {
+            touchStart.current = null;
+          }}
+        >
+          <SongSheet
+            structure={displayedStructure}
+            title={currentSong?.title ?? 'Música'}
+            fontScale={fontScale}
+            {...(diagramsEnabled ? { onChordSelect: setDiagramSymbol } : {})}
+          />
+        </div>
       ) : null}
 
       <nav className={styles.navigation} aria-label="Navegação do modo show">
@@ -548,7 +636,14 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
         <button type="button" onClick={() => move(-1)} disabled={!previousAvailable}>
           <ChevronLeft size={20} /> <span>Anterior</span>
         </button>
-        <button type="button" className={styles.listButton} onClick={() => setTrackListOpen(true)}>
+        <button
+          ref={trackListTriggerRef}
+          type="button"
+          className={styles.listButton}
+          aria-expanded={trackListOpen}
+          aria-controls="show-track-list"
+          onClick={() => setTrackListOpen(true)}
+        >
           <List size={18} />{' '}
           <span>
             {session.index + 1} de {session.entries.length}
@@ -566,6 +661,8 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
           onClick={() => setTrackListOpen(false)}
         >
           <section
+            ref={trackSheetRef}
+            id="show-track-list"
             className={styles.trackSheet}
             role="dialog"
             aria-modal="true"

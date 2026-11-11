@@ -1,5 +1,5 @@
 import { ListMusic, Plus } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { addSongsToRepertory, observeRepertories, type RepertorySummary } from '@/services';
@@ -17,6 +17,8 @@ export function RepertoryPicker({ songId }: RepertoryPickerProps) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const panelId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const subscription = observeRepertories().subscribe({
@@ -25,6 +27,37 @@ export function RepertoryPicker({ songId }: RepertoryPickerProps) {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const root = rootRef.current;
+
+    function handlePointerDown(event: PointerEvent): void {
+      if (root && !root.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    const firstControl =
+      panelRef.current?.querySelector<HTMLElement>('select, button:not(:disabled)') ??
+      panelRef.current;
+    firstControl?.focus();
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+      const trigger = root?.querySelector<HTMLButtonElement>('button[aria-expanded]');
+      if (trigger?.isConnected) trigger.focus();
+    };
+  }, [open]);
 
   async function handleAdd(): Promise<void> {
     const repertory = repertories.find((item) => item.id === selectedId);
@@ -40,7 +73,7 @@ export function RepertoryPicker({ songId }: RepertoryPickerProps) {
   }
 
   return (
-    <div className={styles.repertoryPicker}>
+    <div ref={rootRef} className={styles.repertoryPicker}>
       <Button
         variant="ghost"
         aria-expanded={open}
@@ -53,10 +86,12 @@ export function RepertoryPicker({ songId }: RepertoryPickerProps) {
       </Button>
       {open ? (
         <div
+          ref={panelRef}
           id={panelId}
           className={styles.repertoryPickerPanel}
           role="dialog"
           aria-label="Adicionar a um repertório"
+          tabIndex={-1}
         >
           {repertories.length > 0 ? (
             <>

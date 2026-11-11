@@ -8,6 +8,7 @@
   align-items: center;
   justify-self: start;
   gap: var(--space-2);
+  min-height: 2.75rem;
   padding: 0;
   border: 0;
   background: transparent;
@@ -141,10 +142,11 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  touch-action: pan-y;
 }
 .item {
   display: grid;
-  grid-template-columns: 2rem 1.5rem minmax(0, 1fr) minmax(8rem, 12rem) auto;
+  grid-template-columns: 2rem 2.75rem minmax(0, 1fr) minmax(8rem, 12rem) auto;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
@@ -158,6 +160,10 @@
 .dragging {
   opacity: 0.5;
 }
+.dropTarget {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft);
+}
 .position {
   color: var(--color-text-subtle);
   font-family: var(--font-mono);
@@ -166,6 +172,8 @@
 .dragHandle {
   display: grid;
   place-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   color: var(--color-text-subtle);
   cursor: grab;
   touch-action: none;
@@ -218,6 +226,8 @@
 .itemActions button {
   display: inline-grid;
   place-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   padding: 0.55rem;
   border: 0;
   border-radius: var(--radius-md);
@@ -283,7 +293,7 @@
     width: 100%;
   }
   .item {
-    grid-template-columns: 1.5rem 1.25rem minmax(0, 1fr) auto;
+    grid-template-columns: 1.5rem 2.75rem minmax(0, 1fr) auto;
   }
   .itemTone {
     grid-column: 3 / -1;

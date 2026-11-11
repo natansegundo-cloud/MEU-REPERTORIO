@@ -36,9 +36,15 @@ interface SongViewPageProps {
   readonly songId: string;
   readonly onBack: () => void;
   readonly onEdit: () => void;
+  readonly backLabel?: string;
 }
 
-export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
+export function SongViewPage({
+  songId,
+  onBack,
+  onEdit,
+  backLabel = 'Voltar para a biblioteca',
+}: SongViewPageProps) {
   const { data: song, loading, error } = useSong(songId);
   const [manualShift, setManualShift] = useState<number | null>(null);
   const [toneFeedback, setToneFeedback] = useState<string | null>(null);
@@ -150,7 +156,7 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
       <div className={styles.notFound}>
         <p className={styles.error}>Esta música não está mais disponível.</p>
         <Button variant="secondary" onClick={onBack}>
-          Voltar para a biblioteca
+          {backLabel}
         </Button>
       </div>
     );
@@ -160,7 +166,7 @@ export function SongViewPage({ songId, onBack, onEdit }: SongViewPageProps) {
     <div className={styles.page}>
       <button className={styles.back} type="button" onClick={onBack}>
         <ArrowLeft size={17} />
-        Voltar para a biblioteca
+        {backLabel}
       </button>
 
       <header className={styles.header}>

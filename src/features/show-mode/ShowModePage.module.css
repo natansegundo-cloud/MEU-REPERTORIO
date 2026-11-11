@@ -9,6 +9,10 @@
   touch-action: pan-y;
 }
 
+.reading {
+  touch-action: pan-y;
+}
+
 .topbar,
 .navigation,
 .trackMeta,
@@ -291,6 +295,7 @@
   margin: 0 auto;
   padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
   overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--color-border);
   border-bottom: 0;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;

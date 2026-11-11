@@ -3,3 +3,7 @@
   align-content: start;
   gap: var(--space-8);
 }
+
+.routeContent {
+  display: contents;
+}

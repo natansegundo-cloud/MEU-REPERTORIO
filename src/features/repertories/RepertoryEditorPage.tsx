@@ -8,7 +8,7 @@ import {
   Save,
   Trash2,
 } from 'lucide-react';
-import { useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import {
@@ -48,6 +48,12 @@ export function RepertoryEditorPage({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { data: songs, loading: songsLoading } = useSongs(songQuery);
+  const pointerDragRef = useRef<{
+    itemId: string;
+    pointerId: number;
+    targetIndex: number | null;
+  } | null>(null);
+  const finishPointerDragRef = useRef<() => void>(() => undefined);
 
   function clearMessages(): void {
     setFeedback(null);
@@ -127,21 +133,71 @@ export function RepertoryEditorPage({
     }
   }
 
+  const resetPointerDrag = useCallback((): void => {
+    pointerDragRef.current = null;
+    setDraggingId(null);
+    setPointerDraggingId(null);
+    setPointerTargetIndex(null);
+  }, []);
+
   function handlePointerDown(event: PointerEvent<HTMLSpanElement>, itemId: string): void {
     if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
-    event.preventDefault();
+    if (pointerDragRef.current) return;
+    // O handle tem touch-action: none apenas nele; o restante da lista continua rolando.
+    pointerDragRef.current = { itemId, pointerId: event.pointerId, targetIndex: null };
     setDraggingId(itemId);
     setPointerDraggingId(itemId);
     setPointerTargetIndex(null);
   }
 
-  function finishPointerDrag(): void {
-    if (!detail || !pointerDraggingId || pointerTargetIndex === null) return;
-    void handleMove(pointerDraggingId, pointerTargetIndex);
-    setDraggingId(null);
-    setPointerDraggingId(null);
-    setPointerTargetIndex(null);
+  function handlePointerMove(event: PointerEvent<HTMLOListElement>): void {
+    const drag = pointerDragRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const targetElement =
+      (event.target instanceof Element
+        ? event.target.closest<HTMLElement>('[data-repertory-index]')
+        : null) ??
+      [...event.currentTarget.querySelectorAll<HTMLElement>('[data-repertory-index]')].find(
+        (element) => {
+          const rect = element.getBoundingClientRect();
+          return event.clientY >= rect.top && event.clientY <= rect.bottom;
+        },
+      );
+    const targetIndex = Number(targetElement?.dataset.repertoryIndex);
+    if (!Number.isInteger(targetIndex)) return;
+    drag.targetIndex = targetIndex;
+    setPointerTargetIndex(targetIndex);
   }
+
+  function finishPointerDrag(): void {
+    const drag = pointerDragRef.current;
+    const items = detail?.items;
+    resetPointerDrag();
+    if (!drag || !items || drag.targetIndex === null) return;
+    const from = items.findIndex((entry) => entry.item.id === drag.itemId);
+    if (from < 0 || from === drag.targetIndex) return;
+    void handleMove(drag.itemId, drag.targetIndex);
+  }
+
+  useEffect(() => {
+    finishPointerDragRef.current = finishPointerDrag;
+  });
+
+  useEffect(() => {
+    if (!pointerDraggingId) return undefined;
+    function handleFinish(): void {
+      finishPointerDragRef.current();
+    }
+    function handleCancel(): void {
+      resetPointerDrag();
+    }
+    window.addEventListener('pointerup', handleFinish);
+    window.addEventListener('pointercancel', handleCancel);
+    return () => {
+      window.removeEventListener('pointerup', handleFinish);
+      window.removeEventListener('pointercancel', handleCancel);
+    };
+  }, [pointerDraggingId, resetPointerDrag]);
 
   if (loading) return <p className={styles.feedback}>Abrindo repertório…</p>;
   if (error) return <p className={styles.error}>Não foi possível abrir este repertório.</p>;
@@ -293,12 +349,9 @@ export function RepertoryEditorPage({
         ) : null}
         <ol
           className={styles.itemList}
+          onPointerMove={handlePointerMove}
           onPointerUp={finishPointerDrag}
-          onPointerCancel={() => {
-            setDraggingId(null);
-            setPointerDraggingId(null);
-            setPointerTargetIndex(null);
-          }}
+          onPointerCancel={() => resetPointerDrag()}
         >
           {detail.items.map((entry, index) => {
             const song = entry.song;
@@ -307,19 +360,16 @@ export function RepertoryEditorPage({
             const displayedKey = entry.item.preferredKey ?? song?.preferredKey ?? song?.originalKey;
             return (
               <li
-                className={`${styles.item} ${draggingId === entry.item.id ? styles.dragging : ''}`}
+                className={`${styles.item} ${draggingId === entry.item.id ? styles.dragging : ''} ${
+                  pointerDraggingId && pointerTargetIndex === index ? styles.dropTarget : ''
+                }`}
                 data-testid="repertory-item"
+                data-repertory-index={index}
                 draggable
                 key={entry.item.id}
                 onDragStart={() => setDraggingId(entry.item.id)}
                 onDragEnd={() => setDraggingId(null)}
                 onDragOver={(event) => event.preventDefault()}
-                onPointerEnter={() => {
-                  if (pointerDraggingId) setPointerTargetIndex(index);
-                }}
-                onPointerMove={() => {
-                  if (pointerDraggingId) setPointerTargetIndex(index);
-                }}
                 onDrop={() => {
                   if (draggingId && draggingId !== entry.item.id) {
                     const from = detail.items.findIndex((item) => item.item.id === draggingId);
@@ -328,7 +378,6 @@ export function RepertoryEditorPage({
                     if (from < 0) setErrorMessage('Não foi possível localizar o item arrastado.');
                   }
                 }}
-                onPointerUp={finishPointerDrag}
               >
                 <span className={styles.position}>{index + 1}</span>
                 <span

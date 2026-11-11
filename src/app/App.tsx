@@ -1,8 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { EmptyState } from '@/components/feedback/EmptyState';
 import { AppShell } from '@/components/layout/AppShell';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { UpdateNotice } from '@/components/system/UpdateNotice';
 import {
   BatchImportPage,
@@ -18,72 +16,55 @@ import { SettingsPage } from '@/features/settings/SettingsPage';
 import { useCloudSync } from '@/sync';
 import type { Song } from '@/types';
 
-import { NAVIGATION_BY_ID, type SectionId } from './navigation';
+import type { SectionId } from './navigation';
+import {
+  FAVORITES_ROUTE,
+  LIBRARY_ROUTE,
+  REPERTORIES_ROUTE,
+  sectionForRoute,
+  sectionRoute,
+  type AppRoute,
+} from './routes';
+import { useAppRouter } from './useAppRouter';
 import styles from './App.module.css';
 
-interface PlaceholderContent {
-  title: string;
-  description: string;
-}
-
-type LibraryScreen = 'library' | 'import' | 'batch-import' | 'song' | 'edit';
-
-interface ShowRoute {
-  readonly repertoryId: string;
-  readonly itemId: string | null;
-}
-
-function readShowRoute(): ShowRoute | null {
-  const match = /^#show\/([^/]+)(?:\/([^/]+))?$/u.exec(window.location.hash);
-  if (!match?.[1]) return null;
-  return {
-    repertoryId: decodeURIComponent(match[1]),
-    itemId: match[2] ? decodeURIComponent(match[2]) : null,
-  };
-}
-
-const PLACEHOLDERS: Record<Exclude<SectionId, 'library'>, PlaceholderContent> = {
-  repertories: {
-    title: 'Repertórios na próxima etapa',
-    description:
-      'A estrutura de dados para repertórios e ordenação já foi definida. A interface será construída sobre essa base.',
-  },
-  favorites: {
-    title: 'Favoritos',
-    description: 'Acesso rápido às músicas marcadas neste dispositivo.',
-  },
-  settings: {
-    title: 'Ajustes na próxima etapa',
-    description: 'Preferências e configurações terão uma área dedicada, persistida localmente.',
-  },
-};
+const UNSAVED_CHANGES_MESSAGE = 'Existem alterações não salvas. Sair mesmo assim?';
 
 export function App() {
   useCloudSync();
-  const [activeSection, setActiveSection] = useState<SectionId>('library');
-  const [libraryScreen, setLibraryScreen] = useState<LibraryScreen>('library');
-  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
-  const [selectedRepertoryId, setSelectedRepertoryId] = useState<string | null>(null);
-  const [repertoryScreen, setRepertoryScreen] = useState<'list' | 'edit'>('list');
+  const editorDirty = useRef(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [editorDirty, setEditorDirty] = useState(false);
-  const [showRoute, setShowRoute] = useState<ShowRoute | null>(() => readShowRoute());
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
-  const activeItem = NAVIGATION_BY_ID[activeSection];
-  const ActiveIcon = activeItem.icon;
-
-  useEffect(() => {
-    function handleRouteChange(): void {
-      setShowRoute(readShowRoute());
-    }
-    window.addEventListener('popstate', handleRouteChange);
-    window.addEventListener('hashchange', handleRouteChange);
-    return () => {
-      window.removeEventListener('popstate', handleRouteChange);
-      window.removeEventListener('hashchange', handleRouteChange);
-    };
+  const handleDirtyChange = useCallback((dirty: boolean) => {
+    editorDirty.current = dirty;
   }, []);
+
+  const confirmEditorExit = useCallback((): boolean => {
+    if (!editorDirty.current) return true;
+    if (!window.confirm(UNSAVED_CHANGES_MESSAGE)) return false;
+    editorDirty.current = false;
+    return true;
+  }, []);
+
+  const routeGuard = useCallback(
+    (next: AppRoute, current: AppRoute): boolean => {
+      if (
+        next.name === 'song-edit' &&
+        current.name === 'song-edit' &&
+        next.songId === current.songId &&
+        next.origin === current.origin
+      ) {
+        return true;
+      }
+      return confirmEditorExit();
+    },
+    [confirmEditorExit],
+  );
+
+  const router = useAppRouter(routeGuard);
+  const { route } = router;
+  const activeSection = sectionForRoute(route);
 
   useEffect(() => {
     const handleUpdate = (): void => setUpdateAvailable(true);
@@ -91,39 +72,9 @@ export function App() {
     return () => window.removeEventListener('pwa:need-refresh', handleUpdate);
   }, []);
 
-  function openShow(repertoryId: string, itemId?: string): void {
-    const suffix = itemId ? `/${encodeURIComponent(itemId)}` : '';
-    window.history.pushState(
-      { show: true },
-      '',
-      `#show/${encodeURIComponent(repertoryId)}${suffix}`,
-    );
-    setShowRoute({ repertoryId, itemId: itemId ?? null });
-  }
-
-  function exitShow(): void {
-    const originRepertoryId = showRoute?.repertoryId ?? null;
-    window.history.replaceState({}, '', '#repertories');
-    setShowRoute(null);
-    setActiveSection('repertories');
-    setSelectedRepertoryId(originRepertoryId);
-    setRepertoryScreen(originRepertoryId ? 'edit' : 'list');
-  }
-
   function handleSectionChange(section: SectionId): void {
-    if (libraryScreen === 'edit' && editorDirty && section !== 'library') {
-      if (!window.confirm('Existem alterações não salvas. Sair mesmo assim?')) return;
-      setEditorDirty(false);
-    }
-    setActiveSection(section);
-    if (section !== 'library') {
-      setLibraryScreen('library');
-      setSelectedSongId(null);
-    }
-    if (section === 'repertories') {
-      setRepertoryScreen('list');
-      setSelectedRepertoryId(null);
-    }
+    if (!confirmEditorExit()) return;
+    router.navigate(sectionRoute(section));
   }
 
   function handleImported(song: Song): void {
@@ -132,142 +83,126 @@ export function App() {
       .map((item) => item.message);
     const warningSuffix = warnings.length > 0 ? ` Avisos: ${warnings.join(' ')}` : '';
     setNotice(`“${song.title}” foi adicionada à biblioteca.${warningSuffix}`);
-    setLibraryScreen('library');
+    router.back(LIBRARY_ROUTE);
+  }
+
+  function handleExitShow(repertoryId: string): void {
+    router.back({ name: 'repertory', repertoryId });
+  }
+
+  if (route.name === 'show') {
+    return (
+      <ShowModePage
+        key={route.repertoryId}
+        repertoryId={route.repertoryId}
+        requestedItemId={route.itemId}
+        onExit={() => handleExitShow(route.repertoryId)}
+      />
+    );
   }
 
   let content: ReactNode;
-  if (activeSection === 'library' && libraryScreen === 'import') {
+  if (route.name === 'import') {
     content = (
       <ImportSongPage
-        onBack={() => setLibraryScreen('library')}
+        onBack={() => router.back(LIBRARY_ROUTE)}
         onImported={handleImported}
-        onBatch={() => setLibraryScreen('batch-import')}
+        onBatch={() => router.navigate({ name: 'batch-import' })}
       />
     );
-  } else if (activeSection === 'library' && libraryScreen === 'batch-import') {
+  } else if (route.name === 'batch-import') {
     content = (
       <BatchImportPage
-        onBack={() => setLibraryScreen('import')}
+        onBack={() => router.back({ name: 'import' })}
         onCompleted={(count) => {
           setNotice(
             `${count} música${count === 1 ? '' : 's'} importada${count === 1 ? '' : 's'} com sucesso.`,
           );
-          setLibraryScreen('library');
+          router.navigate(LIBRARY_ROUTE);
         }}
       />
     );
-  } else if (activeSection === 'library' && libraryScreen === 'song' && selectedSongId) {
+  } else if (route.name === 'song') {
     content = (
       <SongViewPage
-        songId={selectedSongId}
-        onBack={() => setLibraryScreen('library')}
-        onEdit={() => setLibraryScreen('edit')}
+        songId={route.songId}
+        backLabel={
+          route.origin === 'favorites' ? 'Voltar para os favoritos' : 'Voltar para a biblioteca'
+        }
+        onBack={() => router.back(route.origin === 'favorites' ? FAVORITES_ROUTE : LIBRARY_ROUTE)}
+        onEdit={() =>
+          router.navigate({
+            name: 'song-edit',
+            songId: route.songId,
+            origin: route.origin,
+          })
+        }
       />
     );
-  } else if (activeSection === 'library' && libraryScreen === 'edit' && selectedSongId) {
+  } else if (route.name === 'song-edit') {
     content = (
       <SongEditorPage
-        songId={selectedSongId}
-        onBack={() => setLibraryScreen('song')}
-        onDirtyChange={setEditorDirty}
+        songId={route.songId}
+        onBack={() => {
+          handleDirtyChange(false);
+          router.back({
+            name: 'song',
+            songId: route.songId,
+            origin: route.origin,
+          });
+        }}
+        onDirtyChange={handleDirtyChange}
       />
     );
-  } else if (activeSection === 'library') {
+  } else if (route.name === 'repertory') {
+    content = (
+      <RepertoryEditorPage
+        repertoryId={route.repertoryId}
+        onBack={() => router.back(REPERTORIES_ROUTE)}
+        onOpenSongs={() => router.navigate(LIBRARY_ROUTE)}
+        onOpenShow={(itemId) =>
+          router.navigate({
+            name: 'show',
+            repertoryId: route.repertoryId,
+            itemId: itemId ?? null,
+          })
+        }
+      />
+    );
+  } else if (route.name === 'repertories') {
+    content = (
+      <RepertoriesPage
+        onOpenSongs={() => router.navigate(LIBRARY_ROUTE)}
+        onOpenRepertory={(repertoryId) => router.navigate({ name: 'repertory', repertoryId })}
+        onOpenShow={(repertoryId) => router.navigate({ name: 'show', repertoryId, itemId: null })}
+      />
+    );
+  } else if (route.name === 'favorites') {
+    content = (
+      <FavoritesPage
+        onOpenSong={(songId) => router.navigate({ name: 'song', songId, origin: 'favorites' })}
+      />
+    );
+  } else if (route.name === 'settings') {
+    content = <SettingsPage />;
+  } else {
     content = (
       <LibraryPage
         notice={notice}
         onDismissNotice={() => setNotice(null)}
         onAddSong={() => {
           setNotice(null);
-          setLibraryScreen('import');
+          router.navigate({ name: 'import' });
         }}
         onImportBatch={() => {
           setNotice(null);
-          setLibraryScreen('batch-import');
+          router.navigate({ name: 'batch-import' });
         }}
         onCreateRepertory={() => {
-          setActiveSection('repertories');
-          setRepertoryScreen('list');
-          setSelectedRepertoryId(null);
+          router.navigate(REPERTORIES_ROUTE);
         }}
-        onOpenSong={(id) => {
-          setSelectedSongId(id);
-          setLibraryScreen('song');
-        }}
-        onOpenRepertories={() => {
-          setActiveSection('repertories');
-          setRepertoryScreen('list');
-          setSelectedRepertoryId(null);
-        }}
-      />
-    );
-  } else if (activeSection === 'repertories' && repertoryScreen === 'edit' && selectedRepertoryId) {
-    content = (
-      <RepertoryEditorPage
-        repertoryId={selectedRepertoryId}
-        onBack={() => setRepertoryScreen('list')}
-        onOpenSongs={() => {
-          setActiveSection('library');
-          setLibraryScreen('library');
-          setSelectedRepertoryId(null);
-        }}
-        onOpenShow={(itemId) => {
-          if (selectedRepertoryId) openShow(selectedRepertoryId, itemId);
-        }}
-      />
-    );
-  } else if (activeSection === 'repertories') {
-    content = (
-      <RepertoriesPage
-        onOpenSongs={() => {
-          setActiveSection('library');
-          setLibraryScreen('library');
-        }}
-        onOpenRepertory={(id) => {
-          setSelectedRepertoryId(id);
-          setRepertoryScreen('edit');
-        }}
-        onOpenShow={(id) => openShow(id)}
-      />
-    );
-  } else if (activeSection === 'favorites') {
-    content = (
-      <FavoritesPage
-        onOpenSong={(id) => {
-          setActiveSection('library');
-          setSelectedSongId(id);
-          setLibraryScreen('song');
-        }}
-      />
-    );
-  } else if (activeSection === 'settings') {
-    content = <SettingsPage />;
-  } else {
-    const placeholder = PLACEHOLDERS[activeSection as keyof typeof PLACEHOLDERS];
-    content = (
-      <div className={styles.page}>
-        <PageHeader
-          eyebrow="Fundação V2"
-          title={activeItem.label}
-          description={activeItem.description}
-        />
-        <EmptyState
-          icon={ActiveIcon}
-          badge="Próxima etapa"
-          title={placeholder.title}
-          description={placeholder.description}
-        />
-      </div>
-    );
-  }
-
-  if (showRoute) {
-    return (
-      <ShowModePage
-        key={showRoute.repertoryId}
-        repertoryId={showRoute.repertoryId}
-        requestedItemId={showRoute.itemId}
-        onExit={exitShow}
+        onOpenSong={(songId) => router.navigate({ name: 'song', songId, origin: 'library' })}
+        onOpenRepertories={() => router.navigate(REPERTORIES_ROUTE)}
       />
     );
   }
@@ -276,7 +211,9 @@ export function App() {
     <>
       {updateAvailable ? <UpdateNotice /> : null}
       <AppShell activeSection={activeSection} onSectionChange={handleSectionChange}>
-        {content}
+        <div className={styles.routeContent} data-route={route.name}>
+          {content}
+        </div>
       </AppShell>
     </>
   );

@@ -85,7 +85,7 @@ test('funciona em viewport estreita e aceita gesto horizontal', async ({ page })
   await createShow(page);
   await page.getByRole('button', { name: 'Tocar' }).click();
 
-  const show = page.locator('[class*="page"]').first();
+  const show = page.getByTestId('show-reading');
   await show.dispatchEvent('touchstart', {
     touches: [{ identifier: 0, clientX: 300, clientY: 300 }],
     changedTouches: [{ identifier: 0, clientX: 300, clientY: 300 }],
@@ -94,6 +94,17 @@ test('funciona em viewport estreita e aceita gesto horizontal', async ({ page })
     changedTouches: [{ identifier: 0, clientX: 80, clientY: 305 }],
   });
   await expect(page.getByRole('heading', { name: 'Gesto B' })).toBeVisible();
+
+  const slider = page.getByRole('slider', { name: 'Velocidade da rolagem' });
+  await slider.dispatchEvent('touchstart', {
+    touches: [{ identifier: 0, clientX: 300, clientY: 300 }],
+    changedTouches: [{ identifier: 0, clientX: 300, clientY: 300 }],
+  });
+  await slider.dispatchEvent('touchend', {
+    changedTouches: [{ identifier: 0, clientX: 80, clientY: 305 }],
+  });
+  await expect(page.getByRole('heading', { name: 'Gesto B' })).toBeVisible();
+
   expect(
     await page.evaluate(() => {
       const pageWindow = globalThis as unknown as ViewportWindow;
@@ -121,7 +132,25 @@ test('controla a rolagem pela barra persistente sem perder a posição', async (
   const runningPosition = await getScrollY(page);
   expect(runningPosition).toBeGreaterThan(0);
 
-  await page.getByRole('button', { name: 'Pausar rolagem' }).click();
+  const reading = page.getByTestId('show-reading');
+  await reading.dispatchEvent('touchmove', {
+    touches: [{ identifier: 0, clientX: 200, clientY: 400 }],
+    changedTouches: [{ identifier: 0, clientX: 198, clientY: 390 }],
+  });
+  await expect(startButton).toBeVisible();
+  const manualPausePosition = await getScrollY(page);
+  await page.waitForTimeout(250);
+  expect(await getScrollY(page)).toBe(manualPausePosition);
+
+  await startButton.click();
+  await expect(page.getByRole('button', { name: 'Pausar rolagem' })).toBeVisible();
+
+  const pauseButton = page.getByRole('button', { name: 'Pausar rolagem' });
+  await pauseButton.dispatchEvent('touchstart', {
+    touches: [{ identifier: 0, clientX: 320, clientY: 800 }],
+    changedTouches: [{ identifier: 0, clientX: 320, clientY: 800 }],
+  });
+  await pauseButton.click();
   const pausedPosition = await getScrollY(page);
   await page.waitForTimeout(250);
   expect(await getScrollY(page)).toBe(pausedPosition);

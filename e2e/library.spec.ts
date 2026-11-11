@@ -20,6 +20,10 @@ test('importa, pesquisa, abre e mantém uma música após recarregar', async ({ 
   await expect(page.getByLabel('Cifras')).toContainText('A7M');
 
   await page.reload();
+  await expect(page.getByRole('heading', { name: 'Uma Vez Mais' })).toBeVisible();
+  await expect(page.getByLabel('Cifras')).toContainText('A7M');
+
+  await page.getByRole('button', { name: 'Voltar para a biblioteca' }).click();
   await expect(page.getByTestId('song-card')).toBeVisible();
   await expect(page.getByText('Uma Vez Mais')).toBeVisible();
 });
@@ -77,8 +81,10 @@ test('edita uma música, salva o tom preferido e reabre a versão persistida', a
   await expect(page.getByText('D', { exact: true }).first()).toBeVisible();
 
   await page.reload();
-  await expect(page.getByTestId('song-card')).toBeVisible();
-  await page.getByTestId('song-card').getByRole('button').first().click();
   await expect(page.getByRole('heading', { name: 'Música persistida' })).toBeVisible();
   await expect(page.getByText('Letra corrigida')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Voltar para a biblioteca' }).click();
+  await expect(page.getByTestId('song-card')).toBeVisible();
+  await expect(page.getByText('Música persistida')).toBeVisible();
 });
