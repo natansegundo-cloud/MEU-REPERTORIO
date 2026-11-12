@@ -8,6 +8,7 @@ interface SongSheetProps {
   readonly structure: ParsedSong;
   readonly title?: string;
   readonly fontScale?: number;
+  readonly variant?: 'default' | 'stage';
   readonly onChordSelect?: (symbol: string) => void;
 }
 
@@ -57,10 +58,17 @@ function ChordRow({
   );
 }
 
-export function SongSheet({ structure, title, fontScale = 1, onChordSelect }: SongSheetProps) {
+export function SongSheet({
+  structure,
+  title,
+  fontScale = 1,
+  variant = 'default',
+  onChordSelect,
+}: SongSheetProps) {
   return (
     <main
       className={styles.sheet}
+      data-variant={variant}
       aria-label={title ? `Conteúdo de ${title}` : 'Conteúdo da música'}
       style={{ '--song-font-scale': fontScale } as CSSProperties}
     >

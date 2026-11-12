@@ -144,7 +144,7 @@ export function BackupPanel() {
       id="backup-title"
       icon={Archive}
       title="Backup e restauração"
-      description="Proteja sua biblioteca local sem depender de internet ou da nuvem."
+      description="Exporte ou restaure sua biblioteca local."
     >
       <div className={styles.actions}>
         <Button onClick={() => void handleExport()} disabled={isExporting || isRestoring}>

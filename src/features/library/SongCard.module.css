@@ -34,7 +34,12 @@
   place-items: center;
   width: 1.75rem;
   height: 1.75rem;
-  color: var(--color-accent-strong);
+  color: var(--color-text-subtle);
+  transition: color var(--transition-fast);
+}
+
+.card:hover .icon {
+  color: var(--color-accent-text);
 }
 
 .copy {
@@ -72,21 +77,22 @@
   display: grid;
   place-items: center;
   align-self: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   margin-right: var(--space-1);
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--color-text-subtle);
+  transition: opacity var(--transition-fast);
 }
 
 .favorite {
   display: grid;
   place-items: center;
   align-self: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
@@ -95,16 +101,27 @@
 
 .favorite:hover {
   background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
+  color: var(--color-accent-text);
 }
 
 .favorite[aria-pressed='true'] {
-  color: var(--color-accent-strong);
+  color: var(--color-accent-text);
 }
 
 .delete:hover {
   background: var(--color-danger-soft);
   color: var(--color-danger);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .delete {
+    opacity: 0;
+  }
+
+  .card:hover .delete,
+  .card:focus-within .delete {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 520px) {

@@ -45,12 +45,18 @@
 }
 
 .navItem[aria-current='page'] {
-  background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
+  background: var(--color-surface-interactive);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+  color: var(--color-text);
+}
+
+.navItem[aria-current='page'] .navIcon {
+  color: var(--color-accent-text);
 }
 
 .navIcon {
   flex: none;
+  color: var(--color-text-subtle);
 }
 
 .navLabel {

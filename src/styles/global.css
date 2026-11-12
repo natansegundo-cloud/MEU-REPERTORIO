@@ -10,6 +10,7 @@
 html {
   min-height: 100%;
   background: var(--color-bg);
+  accent-color: var(--color-accent);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -91,7 +92,8 @@ select {
 ):hover,
 :where(textarea):hover,
 :where(select):hover {
-  border-color: var(--color-text-subtle);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
 }
 
 :where(

@@ -39,6 +39,10 @@
 }
 
 .navItem[aria-current='page'] {
-  background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
+  background: var(--color-surface-interactive);
+  color: var(--color-text);
+}
+
+.navItem[aria-current='page'] svg {
+  color: var(--color-accent-text);
 }

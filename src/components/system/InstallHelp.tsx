@@ -38,7 +38,7 @@ export function InstallHelp() {
       description={
         isStandalone
           ? 'O aplicativo está aberto no modo instalado.'
-          : 'No iPhone ou iPad, use o Safari para adicionar este aplicativo à Tela de Início.'
+          : 'No iPhone ou iPad, adicione pelo Safari.'
       }
     >
       <details className={styles.details}>
@@ -51,10 +51,7 @@ export function InstallHelp() {
           <li>Selecione Adicionar à Tela de Início.</li>
           <li>Confirme em Adicionar.</li>
         </ol>
-        <p className={styles.note}>
-          O aplicativo não exibe um botão de instalação: no iOS, a instalação é confirmada pelo menu
-          do Safari.
-        </p>
+        <p className={styles.note}>No iOS, a instalação é confirmada pelo menu do Safari.</p>
       </details>
     </SettingsCard>
   );

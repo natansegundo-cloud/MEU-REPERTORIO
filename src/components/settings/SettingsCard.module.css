@@ -1,31 +1,24 @@
 .card {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-3);
   width: 100%;
   min-width: 0;
-  padding: clamp(var(--space-4), 3vw, var(--space-6));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
 }
 
 .header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
-  gap: var(--space-3);
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .icon {
   display: inline-grid;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
   place-items: center;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--color-accent-strong);
+  color: var(--color-text-subtle);
 }
 
 .copy {
@@ -35,7 +28,7 @@
 .title {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   line-height: var(--leading-tight);
   overflow-wrap: anywhere;
 }
@@ -43,12 +36,12 @@
 .description {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   line-height: var(--leading-normal);
 }
 
 .body {
   display: grid;
   min-width: 0;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }

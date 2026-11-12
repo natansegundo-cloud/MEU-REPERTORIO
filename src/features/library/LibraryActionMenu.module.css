@@ -10,11 +10,11 @@
   place-items: center;
   width: 3.25rem;
   height: 3.25rem;
-  border: 1px solid var(--color-accent-strong);
+  border: 1px solid transparent;
   border-radius: var(--radius-full);
   background: var(--color-accent);
   color: var(--color-accent-contrast);
-  box-shadow: 0 8px 20px rgb(39 43 38 / 14%);
+  box-shadow: var(--shadow-fab);
   transition:
     background-color var(--transition-fast),
     box-shadow var(--transition-fast),
@@ -22,11 +22,11 @@
 }
 
 .trigger:hover {
-  background: var(--color-accent-strong);
-  box-shadow: 0 10px 24px rgb(39 43 38 / 18%);
+  background: var(--color-accent-hover);
 }
 
 .trigger:active {
+  background: var(--color-accent-active);
   transform: translateY(1px) scale(0.98);
 }
 
@@ -41,7 +41,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface-raised);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-menu);
   opacity: 0;
   pointer-events: none;
   transform: translateY(0.35rem) scale(0.98);
@@ -78,7 +78,7 @@
 
 .menuItem:hover {
   background: var(--color-surface-interactive);
-  color: var(--color-accent-strong);
+  color: var(--color-text);
 }
 
 @media (max-width: 640px) {

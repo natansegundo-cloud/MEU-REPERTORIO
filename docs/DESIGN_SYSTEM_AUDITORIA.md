@@ -1,5 +1,10 @@
 # Auditoria do design system — Etapa 20
 
+> **Nota (Etapa 26):** este documento registra a auditoria da Etapa 20 e a
+> identidade então adotada (verde/violeta). A paleta e os tokens foram
+> substituídos na Etapa 26; consulte `ETAPA_26_IDENTIDADE_VISUAL.md` para o
+> sistema visual vigente.
+
 ## Escopo
 
 Auditoria da fundação visual do Meu Repertório V2 antes do refinamento de telas.

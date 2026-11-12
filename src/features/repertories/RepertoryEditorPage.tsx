@@ -19,7 +19,6 @@ import {
   updateRepertoryItemKey,
 } from '@/services';
 
-import { LibraryTabs } from '@/features/library/LibraryTabs';
 import { useSongs } from '@/features/library/useSongs';
 import { useRepertoryDetail } from './useRepertories';
 import styles from './RepertoryEditorPage.module.css';
@@ -27,19 +26,14 @@ import styles from './RepertoryEditorPage.module.css';
 interface RepertoryEditorPageProps {
   readonly repertoryId: string;
   readonly onBack: () => void;
-  readonly onOpenSongs: () => void;
   readonly onOpenShow: (itemId?: string) => void;
 }
 
-export function RepertoryEditorPage({
-  repertoryId,
-  onBack,
-  onOpenSongs,
-  onOpenShow,
-}: RepertoryEditorPageProps) {
+export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: RepertoryEditorPageProps) {
   const { data: detail, loading, error } = useRepertoryDetail(repertoryId);
   const [songQuery, setSongQuery] = useState('');
   const [selectedSongIds, setSelectedSongIds] = useState<readonly string[]>([]);
+  const [addOpen, setAddOpen] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -80,6 +74,7 @@ export function RepertoryEditorPage({
     try {
       await addSongsToRepertory(detail.repertory.id, selectedSongIds, detail.repertory.revision);
       setSelectedSongIds([]);
+      setAddOpen(false);
       setFeedback('Músicas adicionadas ao repertório.');
     } catch (cause: unknown) {
       setErrorMessage(
@@ -221,16 +216,8 @@ export function RepertoryEditorPage({
         Voltar para repertórios
       </button>
 
-      <LibraryTabs
-        active="repertories"
-        onChange={(tab) => {
-          if (tab === 'songs') onOpenSongs();
-        }}
-      />
-
       <header className={styles.header}>
         <div className={styles.heading}>
-          <p className={styles.eyebrow}>Editor de repertório</p>
           {editingName ? (
             <div className={styles.titleEdit}>
               <input
@@ -264,62 +251,73 @@ export function RepertoryEditorPage({
             {detail.items.length} {detail.items.length === 1 ? 'música' : 'músicas'} nesta ordem.
           </p>
         </div>
-        <Button onClick={() => onOpenShow()} disabled={detail.items.length === 0}>
-          <Play size={17} /> Tocar
+        <Button size="sm" onClick={() => onOpenShow()} disabled={detail.items.length === 0}>
+          <Play size={16} /> Tocar
         </Button>
       </header>
 
-      <section className={styles.addPanel} aria-labelledby="add-songs-heading">
-        <div className={styles.sectionHeading}>
-          <div>
-            <h2 id="add-songs-heading">Adicionar músicas</h2>
-            <p>Selecione várias músicas de uma vez. As novas entram no final.</p>
-          </div>
-          <Button onClick={() => void handleAddSongs()} disabled={selectedSongIds.length === 0}>
-            <Plus size={17} /> Adicionar{' '}
-            {selectedSongIds.length > 0 ? `(${selectedSongIds.length})` : ''}
-          </Button>
-        </div>
-        <label className={styles.search}>
-          <span className={styles.srOnly}>Pesquisar músicas para adicionar</span>
-          <input
-            value={songQuery}
-            onChange={(event) => setSongQuery(event.target.value)}
-            placeholder="Pesquisar por título, artista ou tom"
-          />
-        </label>
-        <div className={styles.songPicker}>
-          {songsLoading ? <p className={styles.muted}>Carregando músicas…</p> : null}
-          {!songsLoading && songs.filter((song) => !existingSongIds.has(song.id)).length === 0 ? (
-            <p className={styles.muted}>Nenhuma música disponível para adicionar.</p>
+      <details
+        className={styles.addPanel}
+        open={addOpen}
+        onToggle={(event) => setAddOpen(event.currentTarget.open)}
+      >
+        <summary className={styles.addSummary}>
+          <span>Adicionar músicas</span>
+          {selectedSongIds.length > 0 ? (
+            <small>
+              {selectedSongIds.length}{' '}
+              {selectedSongIds.length === 1 ? 'selecionada' : 'selecionadas'}
+            </small>
           ) : null}
-          {songs
-            .filter((song) => !existingSongIds.has(song.id))
-            .map((song) => {
-              const checked = selectedSongIds.includes(song.id);
-              return (
-                <label className={styles.songOption} key={song.id}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() =>
-                      setSelectedSongIds((current) =>
-                        checked ? current.filter((id) => id !== song.id) : [...current, song.id],
-                      )
-                    }
-                  />
-                  <span>
-                    <strong>{song.title}</strong>
-                    <small>
-                      {song.artist ?? 'Artista não informado'} ·{' '}
-                      {song.originalKey ?? 'Tom não informado'}
-                    </small>
-                  </span>
-                </label>
-              );
-            })}
+        </summary>
+        <div className={styles.addBody}>
+          <div className={styles.addToolbar}>
+            <label className={styles.search}>
+              <span className={styles.srOnly}>Pesquisar músicas para adicionar</span>
+              <input
+                value={songQuery}
+                onChange={(event) => setSongQuery(event.target.value)}
+                placeholder="Pesquisar por título, artista ou tom"
+              />
+            </label>
+            <Button onClick={() => void handleAddSongs()} disabled={selectedSongIds.length === 0}>
+              <Plus size={16} /> Adicionar{' '}
+              {selectedSongIds.length > 0 ? `(${selectedSongIds.length})` : ''}
+            </Button>
+          </div>
+          <div className={styles.songPicker}>
+            {songsLoading ? <p className={styles.muted}>Carregando músicas…</p> : null}
+            {!songsLoading && songs.filter((song) => !existingSongIds.has(song.id)).length === 0 ? (
+              <p className={styles.muted}>Nenhuma música disponível para adicionar.</p>
+            ) : null}
+            {songs
+              .filter((song) => !existingSongIds.has(song.id))
+              .map((song) => {
+                const checked = selectedSongIds.includes(song.id);
+                return (
+                  <label className={styles.songOption} key={song.id}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() =>
+                        setSelectedSongIds((current) =>
+                          checked ? current.filter((id) => id !== song.id) : [...current, song.id],
+                        )
+                      }
+                    />
+                    <span>
+                      <strong>{song.title}</strong>
+                      <small>
+                        {song.artist ?? 'Artista não informado'} ·{' '}
+                        {song.originalKey ?? 'Tom não informado'}
+                      </small>
+                    </span>
+                  </label>
+                );
+              })}
+          </div>
         </div>
-      </section>
+      </details>
 
       {feedback ? (
         <p className={styles.success} role="status">
@@ -339,10 +337,8 @@ export function RepertoryEditorPage({
 
       <section className={styles.orderPanel} aria-labelledby="order-heading">
         <div className={styles.sectionHeading}>
-          <div>
-            <h2 id="order-heading">Ordem do repertório</h2>
-            <p>Arraste no desktop ou use os botões para tocar e teclado.</p>
-          </div>
+          <h2 id="order-heading">Ordem do repertório</h2>
+          <span className={styles.orderHint}>Arraste para reordenar</span>
         </div>
         {detail.items.length === 0 ? (
           <p className={styles.emptyOrder}>Adicione músicas acima para montar a ordem.</p>

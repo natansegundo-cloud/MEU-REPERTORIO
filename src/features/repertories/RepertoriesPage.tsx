@@ -94,11 +94,10 @@ export function RepertoriesPage({
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Meu repertório</p>
-          <h1 className={styles.title}>Repertórios</h1>
-          <p className={styles.description}>Organize a ordem das músicas para cada apresentação.</p>
-        </div>
+        <h1 className={styles.title}>Repertórios</h1>
+        <span className={styles.count}>
+          {repertories.length} {repertories.length === 1 ? 'repertório' : 'repertórios'}
+        </span>
       </header>
 
       <LibraryTabs
@@ -137,7 +136,6 @@ export function RepertoriesPage({
             placeholder="Pesquisar repertórios"
           />
         </label>
-        <span className={styles.count}>{repertories.length} repertórios</span>
       </section>
 
       {feedback ? (

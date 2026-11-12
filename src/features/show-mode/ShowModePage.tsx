@@ -545,11 +545,6 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
               </button>
             </div>
           </div>
-          <div className={styles.controlGroup}>
-            <span>Rolagem automática</span>
-            <strong>{scrollSpeed} px/s</strong>
-            <small>Ajuste na barra fixa da apresentação.</small>
-          </div>
           <label className={styles.switchRow}>
             <input
               type="checkbox"
@@ -597,13 +592,14 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
             structure={displayedStructure}
             title={currentSong?.title ?? 'Música'}
             fontScale={fontScale}
+            variant="stage"
             {...(diagramsEnabled ? { onChordSelect: setDiagramSymbol } : {})}
           />
         </div>
       ) : null}
 
       <nav className={styles.navigation} aria-label="Navegação do modo show">
-        <div className={styles.scrollControl} role="group" aria-label="Controle de rolagem">
+        <div className={styles.scrollRow}>
           <button
             className={styles.scrollToggle}
             type="button"
@@ -615,9 +611,6 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
           </button>
           <label className={styles.scrollSpeed}>
             <span className={styles.scrollLabel}>Rolagem</span>
-            <span className={styles.scrollValue} aria-live="polite">
-              {scrollSpeed} px/s
-            </span>
             <input
               type="range"
               min="20"
@@ -631,27 +624,32 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
                 void setPreference(SPEED_KEY, value);
               }}
             />
+            <span className={styles.scrollValue} aria-live="polite">
+              {scrollSpeed} px/s
+            </span>
           </label>
         </div>
-        <button type="button" onClick={() => move(-1)} disabled={!previousAvailable}>
-          <ChevronLeft size={20} /> <span>Anterior</span>
-        </button>
-        <button
-          ref={trackListTriggerRef}
-          type="button"
-          className={styles.listButton}
-          aria-expanded={trackListOpen}
-          aria-controls="show-track-list"
-          onClick={() => setTrackListOpen(true)}
-        >
-          <List size={18} />{' '}
-          <span>
-            {session.index + 1} de {session.entries.length}
-          </span>
-        </button>
-        <button type="button" onClick={() => move(1)} disabled={!nextAvailable}>
-          <span>{nextEntry ? nextEntry.song.title : 'Fim'}</span> <ChevronRight size={20} />
-        </button>
+        <div className={styles.navRow}>
+          <button type="button" onClick={() => move(-1)} disabled={!previousAvailable}>
+            <ChevronLeft size={20} /> <span>Anterior</span>
+          </button>
+          <button
+            ref={trackListTriggerRef}
+            type="button"
+            className={styles.listButton}
+            aria-expanded={trackListOpen}
+            aria-controls="show-track-list"
+            onClick={() => setTrackListOpen(true)}
+          >
+            <List size={18} />{' '}
+            <span>
+              {session.index + 1} de {session.entries.length}
+            </span>
+          </button>
+          <button type="button" onClick={() => move(1)} disabled={!nextAvailable}>
+            <span>{nextEntry ? nextEntry.song.title : 'Fim'}</span> <ChevronRight size={20} />
+          </button>
+        </div>
       </nav>
 
       {trackListOpen ? (

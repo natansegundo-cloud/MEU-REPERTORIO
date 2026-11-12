@@ -5,7 +5,6 @@ import {
   Heart,
   Menu,
   MoreHorizontal,
-  Music2,
   Minus,
   Plus,
   Save,
@@ -171,40 +170,39 @@ export function SongViewPage({
 
       <header className={styles.header}>
         <div className={styles.heading}>
-          <span className={styles.icon} aria-hidden="true">
-            <Music2 size={20} />
-          </span>
-          <div>
-            <p className={styles.eyebrow}>Música</p>
-            <h1 className={styles.title}>{song.title}</h1>
-            {song.artist ? <p className={styles.artist}>{song.artist}</p> : null}
-          </div>
+          <h1 className={styles.title}>{song.title}</h1>
+          {song.artist ? <p className={styles.artist}>{song.artist}</p> : null}
         </div>
         <div className={styles.headerActions}>
-          <Button
-            variant="secondary"
+          <button
+            className={styles.iconAction}
+            type="button"
+            aria-label={favorite ? 'Remover dos favoritos' : 'Favoritar'}
             aria-pressed={favorite}
             onClick={() => void toggleFavorite(song.id)}
           >
-            <Heart size={17} fill={favorite ? 'currentColor' : 'none'} />
-            {favorite ? 'Favorita' : 'Favoritar'}
-          </Button>
-          <Button variant="secondary" onClick={onEdit}>
-            <Edit3 size={17} />
-            Editar música
-          </Button>
+            <Heart size={18} fill={favorite ? 'currentColor' : 'none'} />
+          </button>
+          <button
+            className={styles.iconAction}
+            type="button"
+            aria-label="Editar música"
+            onClick={onEdit}
+          >
+            <Edit3 size={18} />
+          </button>
           <div className={styles.moreActions} ref={moreActionsRef}>
-            <Button
-              className={styles.moreActionsTrigger}
-              variant="secondary"
+            <button
+              className={styles.iconAction}
+              type="button"
               aria-label="Mais ações"
               aria-expanded={moreActionsOpen}
               aria-controls="song-more-actions"
               aria-haspopup="menu"
               onClick={() => setMoreActionsOpen((current) => !current)}
             >
-              <MoreHorizontal size={18} />
-            </Button>
+              <MoreHorizontal size={19} />
+            </button>
             {moreActionsOpen ? (
               <div
                 id="song-more-actions"
@@ -229,9 +227,10 @@ export function SongViewPage({
         </div>
       </header>
 
-      <section className={styles.tonePanel} aria-label="Controles de tom">
-        <div className={styles.toneControls}>
+      <div className={styles.toolbar}>
+        <section className={styles.tonePanel} aria-label="Controles de tom">
           <button
+            className={styles.stepButton}
             type="button"
             aria-label="Baixar um semitom"
             onClick={() => {
@@ -245,6 +244,7 @@ export function SongViewPage({
             {displayedKey ?? '—'}
           </strong>
           <button
+            className={styles.stepButton}
             type="button"
             aria-label="Subir um semitom"
             onClick={() => {
@@ -267,8 +267,31 @@ export function SongViewPage({
           <Button size="sm" onClick={() => void saveDisplayedKey()} aria-label="Salvar tom">
             <Save size={15} /> Salvar
           </Button>
-        </div>
-      </section>
+        </section>
+
+        <details className={styles.readingOptions}>
+          <summary aria-label="Opções de leitura">
+            <Menu size={15} aria-hidden="true" />
+            <span className={styles.readingLabel}>Opções de leitura</span>
+          </summary>
+          <div className={styles.readingTools}>
+            <label>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={diagramsEnabled}
+                onChange={(event) => {
+                  const enabled = event.target.checked;
+                  setDiagramsEnabled(enabled);
+                  void setPreference('reading.diagrams', enabled);
+                  if (!enabled) setDiagramSymbol(null);
+                }}
+              />
+              Exibir diagramas de acordes
+            </label>
+          </div>
+        </details>
+      </div>
 
       {feedback || feedbackError ? (
         <p
@@ -282,48 +305,25 @@ export function SongViewPage({
       {song.originalKey || song.capo !== null || song.tuning ? (
         <dl className={styles.meta} aria-label="Metadados da música">
           {song.originalKey ? (
-            <div className={styles.metaChip}>
+            <div>
               <dt>Tom original</dt>
               <dd>{song.originalKey}</dd>
             </div>
           ) : null}
           {song.capo !== null ? (
-            <div className={styles.metaChip}>
+            <div>
               <dt>Capotraste</dt>
               <dd>Casa {song.capo}</dd>
             </div>
           ) : null}
           {song.tuning ? (
-            <div className={styles.metaChip}>
+            <div>
               <dt>Afinação</dt>
               <dd>{song.tuning}</dd>
             </div>
           ) : null}
         </dl>
       ) : null}
-
-      <details className={styles.readingOptions}>
-        <summary>
-          <Menu size={16} aria-hidden="true" />
-          Opções de leitura
-        </summary>
-        <div className={styles.readingTools}>
-          <label>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={diagramsEnabled}
-              onChange={(event) => {
-                const enabled = event.target.checked;
-                setDiagramsEnabled(enabled);
-                void setPreference('reading.diagrams', enabled);
-                if (!enabled) setDiagramSymbol(null);
-              }}
-            />
-            Exibir diagramas de acordes
-          </label>
-        </div>
-      </details>
       {diagramsEnabled && diagramSymbol ? (
         <ChordDiagramOverlay symbol={diagramSymbol} onClose={closeChordDiagram} />
       ) : null}

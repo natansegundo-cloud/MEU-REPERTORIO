@@ -5,18 +5,18 @@
   max-width: 42rem;
   padding: clamp(var(--space-5), 3vw, var(--space-8));
   border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
 }
 
 .iconWrap {
   display: grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: var(--radius-md);
-  background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-accent-text);
 }
 
 .copy {

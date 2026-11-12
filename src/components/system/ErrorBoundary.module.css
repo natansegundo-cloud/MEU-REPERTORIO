@@ -18,9 +18,11 @@
 }
 
 .eyebrow {
-  color: var(--color-accent-strong);
-  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
   font-weight: var(--weight-semibold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .panel p {

@@ -1,15 +1,18 @@
 .page {
   min-height: 100dvh;
-  padding-top: max(var(--space-4), env(safe-area-inset-top));
+  padding-top: max(var(--space-3), env(safe-area-inset-top));
   padding-right: max(clamp(var(--space-4), 4vw, var(--space-10)), env(safe-area-inset-right));
-  padding-bottom: calc(8rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(9rem + env(safe-area-inset-bottom));
   padding-left: max(clamp(var(--space-4), 4vw, var(--space-10)), env(safe-area-inset-left));
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--color-stage-bg);
+  color: var(--color-stage-text);
+  color-scheme: dark;
   touch-action: pan-y;
 }
 
 .reading {
+  width: min(72rem, 100%);
+  margin: 0 auto;
   touch-action: pan-y;
 }
 
@@ -28,10 +31,10 @@
   top: 0;
   justify-content: space-between;
   gap: var(--space-3);
-  min-height: calc(3.25rem + env(safe-area-inset-top));
+  min-height: calc(3rem + env(safe-area-inset-top));
   padding: env(safe-area-inset-top) max(var(--space-2), env(safe-area-inset-right)) var(--space-2)
     max(var(--space-2), env(safe-area-inset-left));
-  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  background: color-mix(in srgb, var(--color-stage-bg) 90%, transparent);
   backdrop-filter: blur(12px);
 }
 
@@ -49,7 +52,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-stage-muted);
 }
 
 .exit:hover,
@@ -57,22 +60,22 @@
 .sheetHeader button:hover,
 .navigation button:hover:not(:disabled),
 .inlineControls button:hover:not(:disabled) {
-  background: var(--color-surface-muted);
-  color: var(--color-text);
+  background: var(--color-stage-surface);
+  color: var(--color-stage-text);
 }
 
 .trackMeta {
   justify-content: center;
   gap: var(--space-3);
   min-width: 0;
-  color: var(--color-text-subtle);
+  color: var(--color-stage-subtle);
   font-size: var(--text-xs);
 }
 
 .trackMeta strong {
   max-width: min(32rem, 45vw);
   overflow: hidden;
-  color: var(--color-text);
+  color: var(--color-stage-text);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -80,53 +83,48 @@
 .songHeading {
   display: grid;
   gap: var(--space-1);
-  width: min(64rem, 100%);
-  margin: clamp(var(--space-5), 7vw, var(--space-12)) auto var(--space-5);
+  width: min(72rem, 100%);
+  margin: var(--space-3) auto var(--space-4);
 }
 
 .songHeading p,
 .songHeading span,
 .kicker {
-  color: var(--color-text-muted);
+  color: var(--color-stage-muted);
   font-size: var(--text-sm);
 }
 
 .songHeading h1 {
   max-width: 58rem;
-  font-size: clamp(1.8rem, 1.2rem + 2vw, 3rem);
+  font-size: clamp(1.7rem, 1.2rem + 1.7vw, 2.6rem);
   line-height: var(--leading-tight);
   letter-spacing: -0.04em;
 }
 
 .controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
-  width: min(64rem, 100%);
-  margin: 0 auto var(--space-5);
+  width: min(72rem, 100%);
+  margin: 0 auto var(--space-4);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-stage-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--color-stage-surface);
 }
 
 .controlGroup {
   display: grid;
   align-content: start;
   gap: var(--space-2);
-  color: var(--color-text-muted);
+  color: var(--color-stage-muted);
   font-size: var(--text-sm);
 }
 
 .controlGroup small,
 .hint {
-  color: var(--color-text-subtle);
+  color: var(--color-stage-subtle);
   font-size: var(--text-xs);
-}
-
-.controlGroup input[type='range'] {
-  width: 100%;
-  accent-color: var(--color-accent);
 }
 
 .inlineControls {
@@ -135,8 +133,8 @@
 
 .inlineControls button {
   min-width: 2.25rem;
-  border-color: var(--color-border);
-  background: var(--color-bg);
+  border-color: var(--color-stage-border);
+  background: var(--color-stage-bg);
   font-size: var(--text-xs);
 }
 
@@ -145,19 +143,15 @@
   align-items: center;
   grid-column: 1 / -1;
   gap: var(--space-2);
-  color: var(--color-text-muted);
+  color: var(--color-stage-muted);
   font-size: var(--text-sm);
 }
 
 .toast {
   grid-column: 1 / -1;
   margin: 0;
-  color: var(--color-success);
+  color: var(--color-stage-success);
   font-size: var(--text-sm);
-}
-
-.page :global(.song-sheet) {
-  margin: 0 auto;
 }
 
 .navigation {
@@ -166,59 +160,69 @@
   right: 0;
   bottom: 0;
   left: 0;
-  justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-3) max(var(--space-4), env(safe-area-inset-right))
-    max(var(--space-3), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface-raised) 94%, transparent);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) max(var(--space-4), env(safe-area-inset-right))
+    max(var(--space-2), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
+  border-top: 1px solid var(--color-stage-border);
+  background: color-mix(in srgb, var(--color-stage-surface) 94%, transparent);
   backdrop-filter: blur(14px);
 }
 
-.scrollControl {
-  position: absolute;
-  right: max(var(--space-4), env(safe-area-inset-right));
-  bottom: calc(100% + var(--space-2));
+.scrollRow,
+.navRow {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
-  min-height: 3rem;
-  padding: var(--space-1);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-surface-raised) 96%, transparent);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(14px);
+  min-width: 0;
 }
 
-.scrollToggle {
+.scrollRow {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-stage-border);
+}
+
+.navigation .scrollToggle {
   display: grid;
+  flex: 0 0 auto;
   width: 2.5rem;
+  max-width: none;
   height: 2.5rem;
   place-items: center;
   padding: 0;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
-  background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
+  background: var(--color-stage-accent-soft);
+  color: var(--color-stage-accent);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
-.scrollToggle:hover {
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
+.navigation .scrollToggle:hover {
+  background: var(--color-stage-accent);
+  color: var(--color-stage-accent-contrast);
+}
+
+.navigation .scrollToggle[aria-pressed='true'] {
+  background: var(--color-stage-accent);
+  color: var(--color-stage-accent-contrast);
+  box-shadow: 0 0 0 1px var(--color-stage-accent);
 }
 
 .scrollSpeed {
-  display: grid;
-  grid-template-columns: auto auto;
+  display: flex;
+  flex: 1 1 auto;
   align-items: center;
-  gap: 0 var(--space-2);
-  min-width: 8.5rem;
-  padding: 0 var(--space-2);
+  gap: var(--space-2);
+  max-width: 22rem;
+  min-width: 0;
 }
 
 .scrollLabel {
-  color: var(--color-text-subtle);
+  flex: 0 0 auto;
+  color: var(--color-stage-subtle);
   font-size: var(--text-2xs);
   font-weight: var(--weight-semibold);
   letter-spacing: 0.08em;
@@ -226,22 +230,25 @@
 }
 
 .scrollValue {
-  color: var(--color-text-muted);
+  flex: 0 0 auto;
+  min-width: 3.75rem;
+  color: var(--color-stage-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
   text-align: right;
 }
 
 .scrollSpeed input {
-  grid-column: 1 / -1;
-  width: clamp(6rem, 12vw, 8rem);
-  accent-color: var(--color-accent);
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: var(--color-stage-accent);
 }
 
 .navigation button {
-  max-width: min(30vw, 14rem);
-  border-color: var(--color-border);
-  background: var(--color-surface);
+  max-width: min(34vw, 14rem);
+  min-width: 0;
+  border-color: var(--color-stage-border);
+  background: var(--color-stage-surface);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -251,8 +258,22 @@
   opacity: 0.4;
 }
 
+/* O controle de rolagem não usa a superfície padrão dos botões de navegação. */
+.navigation button.scrollToggle:hover:not([aria-pressed='true']) {
+  background: var(--color-stage-accent);
+  color: var(--color-stage-accent-contrast);
+}
+
+.navigation button.scrollToggle[aria-pressed='true'],
+.navigation button.scrollToggle[aria-pressed='true']:hover {
+  border-color: transparent;
+  background: var(--color-stage-accent);
+  color: var(--color-stage-accent-contrast);
+  box-shadow: none;
+}
+
 .listButton {
-  color: var(--color-accent-strong) !important;
+  color: var(--color-stage-text) !important;
 }
 
 .confirmExit,
@@ -271,13 +292,13 @@
   justify-content: center;
   min-height: auto;
   padding: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-warning);
+  border-bottom: 1px solid var(--color-stage-border);
+  color: var(--color-stage-warning);
 }
 
 .emptyState p {
   max-width: 32rem;
-  color: var(--color-text-muted);
+  color: var(--color-stage-muted);
 }
 
 .sheetBackdrop {
@@ -286,7 +307,7 @@
   inset: 0;
   display: flex;
   align-items: flex-end;
-  background: rgb(18 24 21 / 34%);
+  background: var(--color-stage-overlay);
 }
 
 .trackSheet {
@@ -296,10 +317,10 @@
   padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
   overflow: auto;
   overscroll-behavior: contain;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-stage-border);
   border-bottom: 0;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  background: var(--color-surface-raised);
+  background: var(--color-stage-surface);
 }
 
 .sheetHeader {
@@ -327,25 +348,39 @@
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-stage-text);
   text-align: left;
 }
 
 .trackSheet li button:hover,
 .activeTrack {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft) !important;
+  border-color: var(--color-stage-accent);
+  background: var(--color-stage-accent-soft) !important;
 }
 
 .trackSheet li button span:first-child,
 .trackSheet li button small {
-  color: var(--color-text-subtle);
+  color: var(--color-stage-subtle);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
 
 .trackSheet li button span:nth-child(2) {
   overflow-wrap: anywhere;
+}
+
+@media (min-width: 760px) {
+  .navigation {
+    grid-template-columns: auto auto;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-8);
+  }
+
+  .scrollRow {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
 }
 
 @media (max-width: 700px) {
@@ -364,14 +399,8 @@
   .trackMeta strong {
     max-width: 42vw;
   }
-  .navigation {
+  .navRow {
     justify-content: space-between;
-  }
-
-  .scrollControl {
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%);
   }
   .navigation button {
     max-width: 38vw;

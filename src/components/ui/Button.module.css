@@ -28,7 +28,11 @@
 }
 
 .button[data-variant='primary']:hover:not(:disabled) {
-  background: var(--color-accent-strong);
+  background: var(--color-accent-hover);
+}
+
+.button[data-variant='primary']:active:not(:disabled) {
+  background: var(--color-accent-active);
 }
 
 .button[data-variant='secondary'] {

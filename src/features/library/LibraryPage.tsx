@@ -52,11 +52,10 @@ export function LibraryPage({
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Meu repertório</p>
-          <h1 className={styles.title}>Biblioteca</h1>
-          <p className={styles.description}>Suas músicas, cifras e letras disponíveis offline.</p>
-        </div>
+        <h1 className={styles.title}>Biblioteca</h1>
+        <span className={styles.count}>
+          {visibleSongs.length} {visibleSongs.length === 1 ? 'música' : 'músicas'}
+        </span>
       </header>
 
       <LibraryTabs
@@ -77,19 +76,16 @@ export function LibraryPage({
             placeholder="Pesquisar por título, artista ou tom"
           />
         </label>
-        <div className={styles.filters}>
-          <button
-            className={styles.favoriteFilter}
-            type="button"
-            aria-pressed={onlyFavorites}
-            onClick={() => setOnlyFavorites((value) => !value)}
-          >
-            <Heart size={16} fill={onlyFavorites ? 'currentColor' : 'none'} /> Favoritas
-          </button>
-          <span className={styles.count}>
-            {visibleSongs.length} {visibleSongs.length === 1 ? 'música' : 'músicas'}
-          </span>
-        </div>
+        <button
+          className={styles.favoriteFilter}
+          type="button"
+          aria-label="Mostrar apenas favoritas"
+          aria-pressed={onlyFavorites}
+          onClick={() => setOnlyFavorites((value) => !value)}
+        >
+          <Heart size={16} fill={onlyFavorites ? 'currentColor' : 'none'} />{' '}
+          <span className={styles.favoriteLabel}>Favoritas</span>
+        </button>
       </section>
 
       {notice ? (

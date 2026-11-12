@@ -6,7 +6,6 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface-raised);
-  box-shadow: var(--shadow-sm);
 }
 
 .panelHeader,
@@ -20,7 +19,7 @@
 
 .panelHeader strong {
   display: block;
-  color: var(--color-accent-strong);
+  color: var(--color-accent-text);
   font-family: var(--font-mono);
   font-size: var(--text-lg);
 }
@@ -53,8 +52,9 @@
 
 .iconButton:hover,
 .variations button:hover:not(:disabled) {
-  color: var(--color-accent-strong);
-  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
 }
 
 .diagram {

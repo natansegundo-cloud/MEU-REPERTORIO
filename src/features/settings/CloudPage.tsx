@@ -61,7 +61,7 @@ export function CloudPage({ syncController = cloudSyncController }: CloudPagePro
       id="cloud-title"
       icon={Cloud}
       title="Nuvem"
-      description="Sincronização opcional, mantendo sua biblioteca disponível offline."
+      description="Sincronização opcional. A biblioteca continua disponível offline."
     >
       <div className={styles.statusHeader}>
         <span className={styles.statusLabel}>Estado da sincronização</span>

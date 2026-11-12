@@ -21,7 +21,7 @@
 
 .badge[data-tone='accent'] {
   background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
+  color: var(--color-accent-text);
 }
 
 .badge[data-tone='success'] {

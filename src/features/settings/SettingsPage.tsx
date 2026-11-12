@@ -19,11 +19,7 @@ export function SettingsPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader
-        eyebrow="Ajustes"
-        title="Preferências"
-        description="Informações do aplicativo e proteção dos dados locais."
-      />
+      <PageHeader title="Preferências" />
 
       <section className={styles.section} aria-labelledby="data-section-title">
         <h2 id="data-section-title" className={styles.sectionTitle}>
@@ -38,12 +34,12 @@ export function SettingsPage() {
           >
             <p className={styles.storage} role="status">
               {storageStatus === 'persisted'
-                ? 'O armazenamento local está protegido contra limpeza automática.'
+                ? 'Dados locais protegidos contra limpeza automática.'
                 : storageStatus === 'not-persisted'
-                  ? 'O navegador ainda não garantiu que os dados não serão apagados.'
+                  ? 'O navegador ainda pode limpar os dados locais.'
                   : storageStatus === 'unsupported'
-                    ? 'O navegador não oferece proteção persistente para os dados locais.'
-                    : 'Verificando a proteção dos dados locais…'}
+                    ? 'Este navegador não oferece proteção persistente.'
+                    : 'Verificando proteção dos dados locais…'}
             </p>
           </SettingsCard>
           <BackupPanel />

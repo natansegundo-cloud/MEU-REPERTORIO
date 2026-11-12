@@ -159,7 +159,6 @@ export function App() {
       <RepertoryEditorPage
         repertoryId={route.repertoryId}
         onBack={() => router.back(REPERTORIES_ROUTE)}
-        onOpenSongs={() => router.navigate(LIBRARY_ROUTE)}
         onOpenShow={(itemId) =>
           router.navigate({
             name: 'show',

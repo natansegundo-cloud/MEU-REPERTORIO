@@ -36,11 +36,10 @@ export function FavoritesPage({ onOpenSong }: FavoritesPageProps) {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Acesso rápido</p>
-          <h1 className={styles.title}>Favoritos</h1>
-          <p className={styles.description}>As músicas que você mais usa, disponíveis offline.</p>
-        </div>
+        <h1 className={styles.title}>Favoritos</h1>
+        <span className={styles.count}>
+          {favorites.length} {favorites.length === 1 ? 'música' : 'músicas'}
+        </span>
       </header>
       {loading ? <p className={styles.feedback}>Carregando favoritos…</p> : null}
       {error ? (
