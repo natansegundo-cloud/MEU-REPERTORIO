@@ -8,6 +8,7 @@ export {
   type ParsedChord,
 } from './chords';
 export {
+  chordPositionLabel,
   clearVoicingCache,
   getChordVoicings,
   type BarrePosition,

@@ -1,0 +1,66 @@
+.diagram {
+  display: block;
+  width: min(100%, 11.25rem);
+  height: auto;
+  margin-inline: auto;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.string {
+  stroke: var(--color-text-subtle);
+  opacity: 0.52;
+}
+
+.fret {
+  stroke: var(--color-border-strong);
+}
+
+.nut {
+  stroke: var(--color-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.position {
+  fill: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: var(--weight-semibold);
+}
+
+.open {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.4;
+}
+
+.muted {
+  fill: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+}
+
+.finger {
+  fill: var(--color-accent);
+}
+
+.fingerLabel,
+.barreLabel {
+  fill: var(--color-accent-contrast);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: var(--weight-bold);
+  pointer-events: none;
+}
+
+.barre {
+  stroke: var(--color-accent);
+  stroke-width: 11;
+  stroke-linecap: round;
+}

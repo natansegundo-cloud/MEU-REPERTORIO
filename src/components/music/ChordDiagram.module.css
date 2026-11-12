@@ -1,109 +1,102 @@
 .panel {
   display: grid;
+  align-content: start;
+  align-self: start;
   gap: var(--space-3);
-  width: min(100%, 22rem);
+  width: 100%;
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: var(--radius-lg);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
 }
 
-.panelHeader,
-.diagramRow,
-.variations {
+.panelHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
-.panelHeader strong {
-  display: block;
-  color: var(--color-accent-text);
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
+.identity {
+  min-width: 0;
 }
 
-.positionLabel,
-.empty,
-.fingerList,
-.variations {
+.name {
+  display: block;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+}
+
+.position {
+  display: block;
+  margin-top: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--text-xs);
 }
 
-.positionLabel {
-  display: block;
-  margin-top: var(--space-1);
-}
-
-.iconButton,
-.variations button {
-  display: inline-grid;
-  place-items: center;
-  min-width: 2rem;
-  min-height: 2rem;
-  padding: 0.4rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-}
-
-.iconButton:hover,
-.variations button:hover:not(:disabled) {
-  color: var(--color-accent-text);
-  border-color: var(--color-border-strong);
-  background: var(--color-surface-muted);
-}
-
-.diagram {
-  width: 9.5rem;
-  height: 8.9rem;
-  overflow: visible;
-}
-
-.grid {
-  stroke: var(--color-border-strong);
-  stroke-width: 1;
-}
-
-.nut {
-  stroke: var(--color-text);
-  stroke-width: 3;
-}
-
-.finger,
-.barre {
-  fill: var(--color-accent);
-  stroke: var(--color-accent);
-  stroke-width: 5;
-  stroke-linecap: round;
-}
-
-.open {
-  fill: none;
-  stroke: var(--color-text-muted);
-  stroke-width: 1.5;
-}
-
-.muted,
-.fretLabel {
-  fill: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: 10px;
-}
-
-.fingerList {
+.graphic {
   display: grid;
-  gap: var(--space-1);
-  min-width: 4rem;
+  place-items: center;
+  padding: var(--space-1) 0 var(--space-2);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.fingerSummary,
+.variationLabel {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
 }
 
 .variations {
-  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.variationLabel {
+  white-space: nowrap;
+}
+
+.iconButton,
+.navButton {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.iconButton:hover,
+.navButton:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.navButton:disabled {
+  opacity: 0.32;
 }
 
 .empty {
-  margin: 0;
+  max-width: 30ch;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }

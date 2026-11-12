@@ -1,9 +1,10 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import { getChordVoicings, type ChordVoicing } from '@/features/transpose';
+import { chordPositionLabel, getChordVoicings, type ChordVoicing } from '@/features/transpose';
 import { getPreference, setPreference } from '@/services';
 
+import { ChordDiagramGraphic } from './ChordDiagramGraphic';
 import styles from './ChordDiagram.module.css';
 
 interface ChordDiagramProps {
@@ -11,8 +12,11 @@ interface ChordDiagramProps {
   readonly onClose?: () => void;
 }
 
-function FretLabel({ fret }: { readonly fret: number }) {
-  return <span className={styles.fretLabel}>{fret === 1 ? '1' : fret}</span>;
+function fingerSummary(voicing: ChordVoicing): string {
+  if (voicing.fingerCount === 0) return 'Cordas soltas';
+
+  const fingers = `${voicing.fingerCount} ${voicing.fingerCount === 1 ? 'dedo' : 'dedos'}`;
+  return voicing.barre ? `Pestana · ${fingers}` : fingers;
 }
 
 export function ChordDiagram({ symbol, onClose }: ChordDiagramProps) {
@@ -39,7 +43,10 @@ export function ChordDiagram({ symbol, onClose }: ChordDiagramProps) {
     return (
       <aside className={styles.panel} aria-label={`Diagrama de ${symbol}`}>
         <div className={styles.panelHeader}>
-          <strong>{symbol}</strong>
+          <div className={styles.identity}>
+            <strong className={styles.name}>{symbol}</strong>
+            <span className={styles.position}>Sem posição confiável</span>
+          </div>
           {onClose ? (
             <button
               className={styles.iconButton}
@@ -47,23 +54,27 @@ export function ChordDiagram({ symbol, onClose }: ChordDiagramProps) {
               onClick={onClose}
               aria-label="Fechar diagrama"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           ) : null}
         </div>
-        <p className={styles.empty}>Não há uma posição conhecida para este acorde.</p>
+        <p className={styles.empty} role="status">
+          Não há uma posição confiável para este acorde.
+        </p>
       </aside>
     );
   }
 
+  const positionLabel = chordPositionLabel(voicing);
+  const variationLabel =
+    voicings.length > 1 ? `Variação ${variation + 1} de ${voicings.length}` : 'Posição única';
+
   return (
     <aside className={styles.panel} aria-label={`Diagrama de ${symbol}`}>
       <div className={styles.panelHeader}>
-        <div>
-          <strong>{symbol}</strong>
-          <span className={styles.positionLabel}>
-            {voicing.baseFret > 1 ? `Casa ${voicing.baseFret}` : 'Posição aberta'}
-          </span>
+        <div className={styles.identity}>
+          <strong className={styles.name}>{voicing.symbol}</strong>
+          <span className={styles.position}>{positionLabel}</span>
         </div>
         {onClose ? (
           <button
@@ -72,122 +83,43 @@ export function ChordDiagram({ symbol, onClose }: ChordDiagramProps) {
             onClick={onClose}
             aria-label="Fechar diagrama"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         ) : null}
       </div>
-      <div className={styles.diagramRow}>
-        <svg
-          className={styles.diagram}
-          viewBox="0 0 150 142"
-          role="img"
-          aria-label={`Posição ${variation + 1} de ${voicings.length}`}
-        >
-          <FretLabel fret={voicing.baseFret} />
-          <g className={styles.grid}>
-            {Array.from({ length: 6 }, (_, index) => (
-              <line
-                key={`string-${index}`}
-                x1={30 + index * 18}
-                y1="25"
-                x2={30 + index * 18}
-                y2="115"
-              />
-            ))}
-            {Array.from({ length: 6 }, (_, index) => (
-              <line
-                key={`fret-${index}`}
-                x1="30"
-                y1={25 + index * 18}
-                x2="120"
-                y2={25 + index * 18}
-              />
-            ))}
-          </g>
-          <line className={styles.nut} x1="30" y1="25" x2="120" y2="25" />
-          {voicing.strings.map((stringPosition) => {
-            const x = 30 + stringPosition.stringIndex * 18;
-            if (stringPosition.state === 'muted') {
-              return (
-                <text
-                  className={styles.muted}
-                  key={stringPosition.stringIndex}
-                  x={x}
-                  y="15"
-                  textAnchor="middle"
-                >
-                  ×
-                </text>
-              );
-            }
-            if (stringPosition.state === 'open') {
-              return (
-                <circle
-                  className={styles.open}
-                  key={stringPosition.stringIndex}
-                  cx={x}
-                  cy="14"
-                  r="4"
-                />
-              );
-            }
-            const y =
-              25 + ((stringPosition.fret ?? voicing.baseFret) - voicing.baseFret + 1.5) * 18;
-            return (
-              <circle
-                className={styles.finger}
-                key={stringPosition.stringIndex}
-                cx={x}
-                cy={y}
-                r="6"
-              />
-            );
-          })}
-          {voicing.barre ? (
-            <line
-              className={styles.barre}
-              x1={30 + voicing.barre.fromStringIndex * 18}
-              x2={30 + voicing.barre.toStringIndex * 18}
-              y1={25 + (voicing.barre.fret - voicing.baseFret + 1.5) * 18}
-              y2={25 + (voicing.barre.fret - voicing.baseFret + 1.5) * 18}
-            />
-          ) : null}
-        </svg>
-        <div className={styles.fingerList} aria-label="Posições dos dedos">
-          {voicing.fingers.length > 0 ? (
-            voicing.fingers.map((finger) => (
-              <span key={`${finger.finger}-${finger.stringIndex}`}>
-                {finger.finger}: {finger.fret}
-              </span>
-            ))
-          ) : (
-            <span>Sem pestana</span>
-          )}
-        </div>
+
+      <div className={styles.graphic}>
+        <ChordDiagramGraphic voicing={voicing} />
       </div>
-      {voicings.length > 1 ? (
-        <div className={styles.variations} aria-label="Variações do acorde">
-          <button
-            type="button"
-            onClick={() => chooseVariation(Math.max(0, variation - 1))}
-            disabled={variation === 0}
-            aria-label="Variação anterior"
-          >
-            <ChevronLeft size={15} />
-          </button>
-          <span>
-            Variação {variation + 1} de {voicings.length}
-          </span>
-          <button
-            type="button"
-            onClick={() => chooseVariation(Math.min(voicings.length - 1, variation + 1))}
-            disabled={variation === voicings.length - 1}
-            aria-label="Próxima variação"
-          >
-            <ChevronRight size={15} />
-          </button>
-        </div>
-      ) : null}
+
+      <div className={styles.meta}>
+        <span className={styles.fingerSummary}>{fingerSummary(voicing)}</span>
+        {voicings.length > 1 ? (
+          <div className={styles.variations} aria-label="Variações do acorde">
+            <button
+              className={styles.navButton}
+              type="button"
+              onClick={() => chooseVariation(Math.max(0, variation - 1))}
+              disabled={variation === 0}
+              aria-label="Variação anterior"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className={styles.variationLabel}>{variationLabel}</span>
+            <button
+              className={styles.navButton}
+              type="button"
+              onClick={() => chooseVariation(Math.min(voicings.length - 1, variation + 1))}
+              disabled={variation === voicings.length - 1}
+              aria-label="Próxima variação"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        ) : (
+          <span className={styles.variationLabel}>{variationLabel}</span>
+        )}
+      </div>
     </aside>
   );
 }
