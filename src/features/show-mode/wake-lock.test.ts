@@ -23,4 +23,11 @@ describe('screen wake lock', () => {
     await expect(requestScreenWakeLock(failing, false)).resolves.toBeNull();
     await expect(requestScreenWakeLock(failing, true)).resolves.toBeNull();
   });
+
+  it('ignora falha ao liberar um bloqueio já encerrado pelo navegador', async () => {
+    const handle = { release: vi.fn().mockRejectedValue(new Error('already released')) };
+
+    await expect(releaseScreenWakeLock(handle)).resolves.toBeUndefined();
+    expect(handle.release).toHaveBeenCalledOnce();
+  });
 });

@@ -15,6 +15,7 @@ interface FavoritesPageProps {
 
 export function FavoritesPage({ onOpenSong }: FavoritesPageProps) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const { data: songs, loading, error } = useSongs('');
   const favoriteIds = useFavoriteIds();
   const favorites = songs.filter((song) => favoriteIds.has(song.id));
@@ -29,6 +30,17 @@ export function FavoritesPage({ onOpenSong }: FavoritesPageProps) {
     } catch (cause: unknown) {
       setDeleteError(
         cause instanceof Error ? cause.message : 'Não foi possível excluir esta música.',
+      );
+    }
+  }
+
+  async function handleToggleFavorite(id: string): Promise<void> {
+    setFavoriteError(null);
+    try {
+      await toggleFavorite(id);
+    } catch (cause: unknown) {
+      setFavoriteError(
+        cause instanceof Error ? cause.message : 'Não foi possível atualizar o favorito.',
       );
     }
   }
@@ -50,6 +62,11 @@ export function FavoritesPage({ onOpenSong }: FavoritesPageProps) {
           {deleteError}
         </p>
       ) : null}
+      {favoriteError ? (
+        <p className={styles.error} role="alert">
+          {favoriteError}
+        </p>
+      ) : null}
       {!loading && !error && favorites.length === 0 ? (
         <EmptyState
           icon={Heart}
@@ -67,7 +84,7 @@ export function FavoritesPage({ onOpenSong }: FavoritesPageProps) {
               onOpen={onOpenSong}
               onDelete={(id) => void handleDelete(id)}
               favorite
-              onToggleFavorite={(id) => void toggleFavorite(id)}
+              onToggleFavorite={(id) => void handleToggleFavorite(id)}
             />
           ))}
         </div>

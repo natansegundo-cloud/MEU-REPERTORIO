@@ -1,5 +1,5 @@
 import { Archive, Download, FileJson, RefreshCw, Upload } from 'lucide-react';
-import { useState, type ChangeEvent } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 
 import { SettingsCard } from '@/components/settings/SettingsCard';
 import { Button } from '@/components/ui/Button';
@@ -52,6 +52,8 @@ function progressLabel(progress: RestoreProgress | null): string {
 export function BackupPanel() {
   const [isExporting, setIsExporting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const exportingRef = useRef(false);
+  const restoringRef = useRef(false);
   const [restoreMode, setRestoreMode] = useState<RestoreMode>('merge');
   const [preview, setPreview] = useState<RestorePreview | null>(null);
   const [progress, setProgress] = useState<RestoreProgress | null>(null);
@@ -59,6 +61,8 @@ export function BackupPanel() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleExport(): Promise<void> {
+    if (exportingRef.current || restoringRef.current) return;
+    exportingRef.current = true;
     setIsExporting(true);
     setFeedback(null);
     setErrorMessage(null);
@@ -78,6 +82,7 @@ export function BackupPanel() {
         cause instanceof Error ? cause.message : 'Não foi possível exportar o backup.',
       );
     } finally {
+      exportingRef.current = false;
       setIsExporting(false);
     }
   }
@@ -103,7 +108,7 @@ export function BackupPanel() {
   }
 
   async function handleRestore(): Promise<void> {
-    if (!preview || isRestoring) return;
+    if (!preview || restoringRef.current || exportingRef.current) return;
     if (
       restoreMode === 'replace-conflicts' &&
       preview.plan.conflictCount > 0 &&
@@ -114,6 +119,7 @@ export function BackupPanel() {
       return;
     }
 
+    restoringRef.current = true;
     setIsRestoring(true);
     setFeedback(null);
     setErrorMessage(null);
@@ -134,6 +140,7 @@ export function BackupPanel() {
           : 'Não foi possível restaurar o backup. A biblioteca original foi preservada.',
       );
     } finally {
+      restoringRef.current = false;
       setIsRestoring(false);
       setProgress(null);
     }
@@ -239,7 +246,7 @@ export function BackupPanel() {
             </label>
           </fieldset>
 
-          <Button onClick={() => void handleRestore()} disabled={isRestoring}>
+          <Button onClick={() => void handleRestore()} disabled={isRestoring || isExporting}>
             <RefreshCw size={16} />
             {isRestoring ? 'Restaurando…' : 'Restaurar backup'}
           </Button>

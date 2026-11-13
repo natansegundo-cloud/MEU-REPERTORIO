@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,7 +20,7 @@ vi.mock('./RepertoryPicker', () => ({
   RepertoryPicker: () => <button type="button">Adicionar a um repertório</button>,
 }));
 
-import { getPreference, setPreference, updateSongPreferredKey } from '@/services';
+import { getPreference, setPreference, toggleFavorite, updateSongPreferredKey } from '@/services';
 
 import { useIsFavorite } from './useFavorites';
 import { SongViewPage } from './SongViewPage';
@@ -120,5 +120,41 @@ describe('SongViewPage', () => {
 
     await user.click(within(tone).getByRole('button', { name: 'Salvar tom' }));
     expect(updateSongPreferredKey).toHaveBeenCalledWith(song.id, 'C#', song.revision);
+  });
+
+  it('mostra erro visível quando não consegue alternar o favorito', async () => {
+    const user = userEvent.setup();
+    vi.mocked(toggleFavorite).mockRejectedValueOnce(new Error('Falha ao gravar o favorito.'));
+    renderSong();
+
+    await user.click(screen.getByRole('button', { name: 'Favoritar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falha ao gravar o favorito.');
+  });
+
+  it('impede salvar o tom duas vezes enquanto a primeira gravação está pendente', async () => {
+    const user = userEvent.setup();
+    let finishSave: (() => void) | undefined;
+    vi.mocked(updateSongPreferredKey).mockImplementationOnce(
+      () =>
+        new Promise<Song>((resolve) => {
+          finishSave = () => resolve({ ...song, preferredKey: 'C#' });
+        }),
+    );
+    renderSong();
+    const tone = screen.getByRole('region', { name: 'Controles de tom' });
+    await user.click(within(tone).getByRole('button', { name: 'Subir um semitom' }));
+
+    const save = within(tone).getByRole('button', { name: 'Salvar tom' });
+    await user.click(save);
+    expect(save).toBeDisabled();
+    expect(save).toHaveTextContent('Salvando…');
+
+    await user.click(save);
+    expect(updateSongPreferredKey).toHaveBeenCalledTimes(1);
+
+    finishSave?.();
+    await waitFor(() => expect(save).not.toBeDisabled());
+    expect(screen.getByRole('status')).toHaveTextContent('Tom preferido salvo: C#.');
   });
 });

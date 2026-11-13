@@ -48,6 +48,9 @@ export function SongViewPage({
   const [manualShift, setManualShift] = useState<number | null>(null);
   const [toneFeedback, setToneFeedback] = useState<string | null>(null);
   const [toneError, setToneError] = useState<string | null>(null);
+  const [savingTone, setSavingTone] = useState(false);
+  const savingToneRef = useRef(false);
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [diagramsEnabled, setDiagramsEnabled] = useState(false);
@@ -90,15 +93,18 @@ export function SongViewPage({
   }, [moreActionsOpen]);
 
   useEffect(() => {
-    if (!toneFeedback && !toneError && !exportFeedback && !exportError) return undefined;
+    if (!toneFeedback && !toneError && !favoriteError && !exportFeedback && !exportError) {
+      return undefined;
+    }
     const timeoutId = window.setTimeout(() => {
       setToneFeedback(null);
       setToneError(null);
+      setFavoriteError(null);
       setExportFeedback(null);
       setExportError(null);
     }, 3500);
     return () => window.clearTimeout(timeoutId);
-  }, [exportError, exportFeedback, toneError, toneFeedback]);
+  }, [exportError, exportFeedback, favoriteError, toneError, toneFeedback]);
 
   const preferredShift = song
     ? keyShift(song.originalKey, song.preferredKey ?? song.currentKey)
@@ -111,7 +117,9 @@ export function SongViewPage({
   const displayedKey = displayedStructure?.currentKey ?? song?.originalKey ?? null;
 
   async function saveDisplayedKey(): Promise<void> {
-    if (!song) return;
+    if (!song || savingToneRef.current) return;
+    savingToneRef.current = true;
+    setSavingTone(true);
     setToneFeedback(null);
     setToneError(null);
     const preferredKey =
@@ -126,6 +134,9 @@ export function SongViewPage({
       setToneError(
         cause instanceof Error ? cause.message : 'Não foi possível salvar o tom preferido.',
       );
+    } finally {
+      savingToneRef.current = false;
+      setSavingTone(false);
     }
   }
 
@@ -143,10 +154,21 @@ export function SongViewPage({
     }
   }
 
+  async function handleToggleFavorite(): Promise<void> {
+    setFavoriteError(null);
+    try {
+      await toggleFavorite(songId);
+    } catch (cause: unknown) {
+      setFavoriteError(
+        cause instanceof Error ? cause.message : 'Não foi possível atualizar o favorito.',
+      );
+    }
+  }
+
   const closeChordDiagram = useCallback(() => setDiagramSymbol(null), []);
 
   const feedback = toneFeedback ?? exportFeedback;
-  const feedbackError = toneError ?? exportError;
+  const feedbackError = favoriteError ?? toneError ?? exportError;
 
   if (loading) return <p className={styles.feedback}>Abrindo música…</p>;
   if (error) return <p className={styles.error}>Não foi possível abrir esta música local.</p>;
@@ -179,7 +201,7 @@ export function SongViewPage({
             type="button"
             aria-label={favorite ? 'Remover dos favoritos' : 'Favoritar'}
             aria-pressed={favorite}
-            onClick={() => void toggleFavorite(song.id)}
+            onClick={() => void handleToggleFavorite()}
           >
             <Heart size={18} fill={favorite ? 'currentColor' : 'none'} />
           </button>
@@ -264,8 +286,13 @@ export function SongViewPage({
           >
             Original
           </button>
-          <Button size="sm" onClick={() => void saveDisplayedKey()} aria-label="Salvar tom">
-            <Save size={15} /> Salvar
+          <Button
+            size="sm"
+            onClick={() => void saveDisplayedKey()}
+            disabled={savingTone}
+            aria-label="Salvar tom"
+          >
+            <Save size={15} /> {savingTone ? 'Salvando…' : 'Salvar'}
           </Button>
         </section>
 

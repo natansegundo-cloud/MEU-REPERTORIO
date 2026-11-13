@@ -103,10 +103,13 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
   const [autoScroll, setAutoScroll] = useState(false);
   const [toneShifts, setToneShifts] = useState<Record<string, number | string | null>>({});
   const [toneStatus, setToneStatus] = useState<string | null>(null);
+  const [toneSaving, setToneSaving] = useState(false);
+  const [wakeLockActive, setWakeLockActive] = useState<boolean | null>(null);
   const [exitPending, setExitPending] = useState(false);
   const autoScrollingUntil = useRef(0);
   const scrollController = useRef<ScrollController | null>(null);
   const wakeLock = useRef<WakeLockHandle | null>(null);
+  const toneSavingRef = useRef(false);
   const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
   const trackSheetRef = useRef<HTMLElement>(null);
   const trackListTriggerRef = useRef<HTMLButtonElement>(null);
@@ -323,21 +326,44 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
 
   useEffect(() => {
     const navigatorWithWakeLock = navigator as WakeLockProvider;
+    let active = true;
+    let requesting = false;
+
     async function acquire(): Promise<void> {
-      wakeLock.current = await requestScreenWakeLock(
-        navigatorWithWakeLock,
-        document.visibilityState === 'visible',
-      );
+      if (requesting || document.visibilityState !== 'visible') return;
+      requesting = true;
+      try {
+        const handle = await requestScreenWakeLock(navigatorWithWakeLock, true);
+        if (!active || document.visibilityState !== 'visible') {
+          await releaseScreenWakeLock(handle);
+          return;
+        }
+        const previous = wakeLock.current;
+        wakeLock.current = handle;
+        if (previous && previous !== handle) await releaseScreenWakeLock(previous);
+        setWakeLockActive(handle !== null);
+      } finally {
+        requesting = false;
+      }
     }
+
     function handleVisibility(): void {
-      if (document.visibilityState === 'visible') void acquire();
+      if (document.visibilityState === 'visible') {
+        void acquire();
+      } else {
+        // O navegador libera o bloqueio ao ocultar a página; o estado visual acompanha.
+        setWakeLockActive(false);
+      }
     }
+
     void acquire();
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
+      active = false;
       document.removeEventListener('visibilitychange', handleVisibility);
-      void releaseScreenWakeLock(wakeLock.current);
+      const handle = wakeLock.current;
       wakeLock.current = null;
+      void releaseScreenWakeLock(handle);
     };
   }, []);
 
@@ -387,7 +413,9 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
   }
 
   async function persistTone(nextShift: number): Promise<void> {
-    if (!currentEntry) return;
+    if (!currentEntry || toneSavingRef.current) return;
+    toneSavingRef.current = true;
+    setToneSaving(true);
     const previousShift = toneShift;
     const nextKey =
       nextShift === startShift ? initialItemKey : keyForShift(sourceKey, nextShift, startKey);
@@ -405,6 +433,9 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
     } catch (cause: unknown) {
       setToneShifts((current) => ({ ...current, [currentEntry.item.id]: previousShift }));
       setToneStatus(cause instanceof Error ? cause.message : 'Não foi possível salvar o tom.');
+    } finally {
+      toneSavingRef.current = false;
+      setToneSaving(false);
     }
   }
 
@@ -446,7 +477,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
           type="button"
           onClick={() => setControlsOpen((open) => !open)}
           aria-expanded={controlsOpen}
-          aria-label="Abrir controles"
+          aria-label={controlsOpen ? 'Fechar controles' : 'Abrir controles'}
         >
           <Settings2 size={18} />
         </button>
@@ -485,6 +516,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
               <button
                 type="button"
                 onClick={() => void persistTone(toneShift - 1)}
+                disabled={toneSaving}
                 aria-label="Baixar um semitom"
               >
                 <Minus size={16} />
@@ -492,6 +524,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
               <button
                 type="button"
                 onClick={() => void persistTone(startShift)}
+                disabled={toneSaving}
                 aria-label="Voltar ao tom de partida"
               >
                 <RotateCcw size={16} />
@@ -499,6 +532,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
               <button
                 type="button"
                 onClick={() => void persistTone(toneShift + 1)}
+                disabled={toneSaving}
                 aria-label="Subir um semitom"
               >
                 <Plus size={16} />
@@ -566,6 +600,10 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
           ) : null}
           {!wakeLockAvailable ? (
             <p className={styles.hint}>A tela acesa não é suportada neste navegador.</p>
+          ) : wakeLockActive ? (
+            <p className={styles.hint}>Tela permanecerá acesa durante o show.</p>
+          ) : wakeLockActive === false ? (
+            <p className={styles.hint}>Não foi possível manter a tela acesa neste navegador.</p>
           ) : null}
         </section>
       ) : null}

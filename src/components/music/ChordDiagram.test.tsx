@@ -30,6 +30,19 @@ describe('ChordDiagram', () => {
     expect(screen.getByText('Pestana · 4 dedos')).toBeInTheDocument();
   });
 
+  it('mostra a quinta omitida apenas no voicing que a omite', async () => {
+    const user = userEvent.setup();
+    render(<ChordDiagram symbol="C7M" />);
+
+    expect(screen.queryByText(/5ª omitida/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Próxima variação' }));
+    expect(screen.getByText(/5ª omitida/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Próxima variação' }));
+    expect(screen.queryByText(/5ª omitida/)).not.toBeInTheDocument();
+  });
+
   it('não inventa posição para acorde não conhecido', () => {
     render(<ChordDiagram symbol="H" />);
 

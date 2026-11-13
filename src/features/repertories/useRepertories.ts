@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { observeRepertories, observeRepertoryDetail } from '@/services';
 import type { EntityId } from '@/types';
@@ -50,6 +50,7 @@ export function useRepertoryDetail(id: EntityId | null): {
   data: RepertoryDetail | null;
   loading: boolean;
   error: Error | null;
+  refresh: () => void;
 } {
   const [state, setState] = useState<AsyncState<RepertoryDetail | null>>({
     key: id,
@@ -57,6 +58,8 @@ export function useRepertoryDetail(id: EntityId | null): {
     loading: Boolean(id),
     error: null,
   });
+  const [refreshToken, setRefreshToken] = useState(0);
+  const refresh = useCallback(() => setRefreshToken((value) => value + 1), []);
 
   useEffect(() => {
     if (!id) return undefined;
@@ -71,8 +74,8 @@ export function useRepertoryDetail(id: EntityId | null): {
         }),
     });
     return () => subscription.unsubscribe();
-  }, [id]);
+  }, [id, refreshToken]);
 
-  if (state.key !== id) return { data: null, loading: Boolean(id), error: null };
-  return state;
+  if (state.key !== id) return { data: null, loading: Boolean(id), error: null, refresh };
+  return { ...state, refresh };
 }

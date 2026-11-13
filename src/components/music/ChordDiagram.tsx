@@ -12,11 +12,31 @@ interface ChordDiagramProps {
   readonly onClose?: () => void;
 }
 
+const OMITTED_INTERVAL_LABELS: Record<number, string> = {
+  3: '3ª omitida',
+  4: '3ª omitida',
+  7: '5ª omitida',
+  10: '7ª omitida',
+  11: '7ª omitida',
+  14: '9ª omitida',
+  17: '11ª omitida',
+  21: '13ª omitida',
+};
+
 function fingerSummary(voicing: ChordVoicing): string {
   if (voicing.fingerCount === 0) return 'Cordas soltas';
 
   const fingers = `${voicing.fingerCount} ${voicing.fingerCount === 1 ? 'dedo' : 'dedos'}`;
   return voicing.barre ? `Pestana · ${fingers}` : fingers;
+}
+
+function omittedSummary(voicing: ChordVoicing): string | null {
+  if (voicing.omittedIntervals.length === 0) return null;
+
+  const labels = voicing.omittedIntervals.map(
+    (interval) => OMITTED_INTERVAL_LABELS[interval] ?? 'Intervalo omitido',
+  );
+  return [...new Set(labels)].join(' · ');
 }
 
 export function ChordDiagram({ symbol, onClose }: ChordDiagramProps) {
@@ -66,6 +86,7 @@ export function ChordDiagram({ symbol, onClose }: ChordDiagramProps) {
   }
 
   const positionLabel = chordPositionLabel(voicing);
+  const omittedLabel = omittedSummary(voicing);
   const variationLabel =
     voicings.length > 1 ? `Variação ${variation + 1} de ${voicings.length}` : 'Posição única';
 
@@ -93,7 +114,10 @@ export function ChordDiagram({ symbol, onClose }: ChordDiagramProps) {
       </div>
 
       <div className={styles.meta}>
-        <span className={styles.fingerSummary}>{fingerSummary(voicing)}</span>
+        <span className={styles.fingerSummary}>
+          {fingerSummary(voicing)}
+          {omittedLabel ? <span className={styles.omitted}> · {omittedLabel}</span> : null}
+        </span>
         {voicings.length > 1 ? (
           <div className={styles.variations} aria-label="Variações do acorde">
             <button

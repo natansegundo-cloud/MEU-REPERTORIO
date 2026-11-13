@@ -29,18 +29,29 @@ interface RepertoryEditorPageProps {
   readonly onOpenShow: (itemId?: string) => void;
 }
 
+const REVISION_CONFLICT_MESSAGE =
+  'Este repertório foi alterado em outro dispositivo ou aba. Atualize a versão antes de tentar novamente.';
+
+function isRevisionConflict(cause: unknown): boolean {
+  return cause instanceof Error && cause.name === 'RepertoryRevisionConflictError';
+}
+
 export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: RepertoryEditorPageProps) {
-  const { data: detail, loading, error } = useRepertoryDetail(repertoryId);
+  const { data: detail, loading, error, refresh } = useRepertoryDetail(repertoryId);
   const [songQuery, setSongQuery] = useState('');
   const [selectedSongIds, setSelectedSongIds] = useState<readonly string[]>([]);
   const [addOpen, setAddOpen] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  const restoreNameFocusRef = useRef(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [pointerDraggingId, setPointerDraggingId] = useState<string | null>(null);
   const [pointerTargetIndex, setPointerTargetIndex] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [revisionConflict, setRevisionConflict] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const pendingActionRef = useRef(false);
   const { data: songs, loading: songsLoading } = useSongs(songQuery);
   const pointerDragRef = useRef<{
     itemId: string;
@@ -52,24 +63,47 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
   function clearMessages(): void {
     setFeedback(null);
     setErrorMessage(null);
+    setRevisionConflict(false);
+  }
+
+  function describeActionError(cause: unknown, fallback: string): string {
+    if (isRevisionConflict(cause)) {
+      setRevisionConflict(true);
+      return REVISION_CONFLICT_MESSAGE;
+    }
+    setRevisionConflict(false);
+    return cause instanceof Error ? cause.message : fallback;
+  }
+
+  function startAction(action: string): boolean {
+    if (pendingActionRef.current) return false;
+    pendingActionRef.current = true;
+    setPendingAction(action);
+    return true;
+  }
+
+  function finishAction(): void {
+    pendingActionRef.current = false;
+    setPendingAction(null);
   }
 
   async function handleRename(): Promise<void> {
-    if (!detail) return;
+    if (!detail || !startAction('rename')) return;
     clearMessages();
     try {
       await renameRepertory(detail.repertory.id, nameDraft, detail.repertory.revision);
+      restoreNameFocusRef.current = true;
       setEditingName(false);
       setFeedback('Nome do repertório atualizado.');
     } catch (cause: unknown) {
-      setErrorMessage(
-        cause instanceof Error ? cause.message : 'Não foi possível renomear o repertório.',
-      );
+      setErrorMessage(describeActionError(cause, 'Não foi possível renomear o repertório.'));
+    } finally {
+      finishAction();
     }
   }
 
   async function handleAddSongs(): Promise<void> {
-    if (!detail || selectedSongIds.length === 0) return;
+    if (!detail || selectedSongIds.length === 0 || !startAction('add')) return;
     clearMessages();
     try {
       await addSongsToRepertory(detail.repertory.id, selectedSongIds, detail.repertory.revision);
@@ -77,14 +111,14 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
       setAddOpen(false);
       setFeedback('Músicas adicionadas ao repertório.');
     } catch (cause: unknown) {
-      setErrorMessage(
-        cause instanceof Error ? cause.message : 'Não foi possível adicionar as músicas.',
-      );
+      setErrorMessage(describeActionError(cause, 'Não foi possível adicionar as músicas.'));
+    } finally {
+      finishAction();
     }
   }
 
   async function handleMove(itemId: string, targetIndex: number): Promise<void> {
-    if (!detail) return;
+    if (!detail || !startAction('move')) return;
     clearMessages();
     try {
       await reorderRepertoryItem(
@@ -94,9 +128,9 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
         detail.repertory.revision,
       );
     } catch (cause: unknown) {
-      setErrorMessage(
-        cause instanceof Error ? cause.message : 'Não foi possível reordenar o repertório.',
-      );
+      setErrorMessage(describeActionError(cause, 'Não foi possível reordenar o repertório.'));
+    } finally {
+      finishAction();
     }
   }
 
@@ -104,15 +138,16 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
     const entry = detail?.items.find((candidate) => candidate.item.id === itemId);
     const title = entry?.song?.title ?? 'esta música';
     if (!window.confirm(`Remover “${title}” deste repertório?`)) return;
+    if (!startAction('remove')) return;
 
     clearMessages();
     try {
       await removeRepertoryItem(itemId);
       setFeedback('Música removida do repertório.');
     } catch (cause: unknown) {
-      setErrorMessage(
-        cause instanceof Error ? cause.message : 'Não foi possível remover a música.',
-      );
+      setErrorMessage(describeActionError(cause, 'Não foi possível remover a música.'));
+    } finally {
+      finishAction();
     }
   }
 
@@ -122,9 +157,7 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
       await updateRepertoryItemKey(itemId, value);
       setFeedback('Tom próprio atualizado.');
     } catch (cause: unknown) {
-      setErrorMessage(
-        cause instanceof Error ? cause.message : 'Não foi possível salvar o tom próprio.',
-      );
+      setErrorMessage(describeActionError(cause, 'Não foi possível salvar o tom próprio.'));
     }
   }
 
@@ -136,6 +169,7 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
   }, []);
 
   function handlePointerDown(event: PointerEvent<HTMLSpanElement>, itemId: string): void {
+    if (pendingActionRef.current) return;
     if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
     if (pointerDragRef.current) return;
     // O handle tem touch-action: none apenas nele; o restante da lista continua rolando.
@@ -223,12 +257,34 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
               <input
                 value={nameDraft}
                 onChange={(event) => setNameDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void handleRename();
+                  }
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    restoreNameFocusRef.current = true;
+                    setEditingName(false);
+                  }
+                }}
                 autoFocus
               />
-              <Button size="sm" onClick={() => void handleRename()}>
-                <Save size={15} /> Salvar
+              <Button
+                size="sm"
+                onClick={() => void handleRename()}
+                disabled={pendingAction !== null}
+              >
+                <Save size={15} /> {pendingAction === 'rename' ? 'Salvando…' : 'Salvar'}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  restoreNameFocusRef.current = true;
+                  setEditingName(false);
+                }}
+              >
                 Cancelar
               </Button>
             </div>
@@ -236,6 +292,11 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
             <div className={styles.titleLine}>
               <h1 className={styles.title}>{detail.repertory.name}</h1>
               <button
+                ref={(node) => {
+                  if (!node || !restoreNameFocusRef.current) return;
+                  restoreNameFocusRef.current = false;
+                  node.focus();
+                }}
                 className={styles.editName}
                 type="button"
                 onClick={() => {
@@ -280,8 +341,11 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
                 placeholder="Pesquisar por título, artista ou tom"
               />
             </label>
-            <Button onClick={() => void handleAddSongs()} disabled={selectedSongIds.length === 0}>
-              <Plus size={16} /> Adicionar{' '}
+            <Button
+              onClick={() => void handleAddSongs()}
+              disabled={selectedSongIds.length === 0 || pendingAction !== null}
+            >
+              <Plus size={16} /> {pendingAction === 'add' ? 'Adicionando…' : 'Adicionar'}{' '}
               {selectedSongIds.length > 0 ? `(${selectedSongIds.length})` : ''}
             </Button>
           </div>
@@ -325,14 +389,21 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
         </p>
       ) : null}
       {errorMessage ? (
-        <p className={styles.error} role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
-      {errorMessage && errorMessage.includes('outro lugar') && detail ? (
-        <button className={styles.reloadHint} type="button" onClick={() => setErrorMessage(null)}>
-          Revisar versão atual
-        </button>
+        <div className={styles.alert} role="alert">
+          <span>{errorMessage}</span>
+          {revisionConflict ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                refresh();
+                clearMessages();
+              }}
+            >
+              Atualizar versão
+            </Button>
+          ) : null}
+        </div>
       ) : null}
 
       <section className={styles.orderPanel} aria-labelledby="order-heading">
@@ -408,6 +479,7 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
                   <span>Tom próprio</span>
                   <input
                     key={`${entry.item.id}-${entry.item.preferredKey ?? ''}`}
+                    aria-label={`Tom próprio de ${title}`}
                     defaultValue={entry.item.preferredKey ?? ''}
                     placeholder={song?.originalKey ?? 'Tom'}
                     disabled={!song}
@@ -417,7 +489,7 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
                 <div className={styles.itemActions}>
                   <button
                     type="button"
-                    disabled={index === 0}
+                    disabled={pendingAction !== null || index === 0}
                     onClick={() => void handleMove(entry.item.id, index - 1)}
                   >
                     <ArrowUp size={16} />
@@ -425,13 +497,17 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
                   </button>
                   <button
                     type="button"
-                    disabled={index === detail.items.length - 1}
+                    disabled={pendingAction !== null || index === detail.items.length - 1}
                     onClick={() => void handleMove(entry.item.id, index + 1)}
                   >
                     <ArrowDown size={16} />
                     <span className={styles.srOnly}>Descer {title}</span>
                   </button>
-                  <button type="button" onClick={() => void handleRemove(entry.item.id)}>
+                  <button
+                    type="button"
+                    disabled={pendingAction !== null}
+                    onClick={() => void handleRemove(entry.item.id)}
+                  >
                     <Trash2 size={16} />
                     <span className={styles.srOnly}>Remover {title}</span>
                   </button>

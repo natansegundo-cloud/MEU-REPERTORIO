@@ -47,8 +47,20 @@ test('mantem a leitura focada e abre o diagrama sem deslocar a cifra', async ({ 
   await options.locator('summary').click();
   await page.getByRole('switch', { name: /Exibir diagramas/ }).check();
 
+  const saveTone = page.getByRole('button', { name: 'Salvar tom' });
+  const saveToneBox = await saveTone.boundingBox();
+  expect(saveToneBox).not.toBeNull();
+  expect((saveToneBox?.x ?? 0) + (saveToneBox?.width ?? 0)).toBeLessThanOrEqual(343);
+
   await page.getByRole('button', { name: 'Ver diagrama de C' }).click();
   await expect(page.getByRole('dialog', { name: 'Diagrama de acorde C' })).toBeVisible();
+
+  const nextVariation = page.getByRole('button', { name: 'Próxima variação' });
+  const nextVariationBox = await nextVariation.boundingBox();
+  expect(nextVariationBox).not.toBeNull();
+  expect(nextVariationBox?.width ?? 0).toBeGreaterThanOrEqual(36);
+  expect(nextVariationBox?.height ?? 0).toBeGreaterThanOrEqual(36);
+
   await page.getByRole('button', { name: 'Ver diagrama de G' }).click();
   await expect(page.getByRole('dialog', { name: 'Diagrama de acorde G' })).toBeVisible();
   await page.keyboard.press('Escape');

@@ -1,5 +1,5 @@
 import { Copy, ListMusic, Pencil, Play, Plus, Search, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/Button';
@@ -33,9 +33,30 @@ export function RepertoriesPage({
   const [pendingDelete, setPendingDelete] = useState<RepertorySummary | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const pendingActionRef = useRef<string | null>(null);
+  const focusRenameIdRef = useRef<string | null>(null);
   const { data: repertories, loading, error } = useRepertories(query);
 
+  function cancelRename(repertoryId: string): void {
+    focusRenameIdRef.current = repertoryId;
+    setEditingId(null);
+  }
+
+  function startAction(action: string): boolean {
+    if (pendingActionRef.current) return false;
+    pendingActionRef.current = action;
+    setPendingAction(action);
+    return true;
+  }
+
+  function finishAction(): void {
+    pendingActionRef.current = null;
+    setPendingAction(null);
+  }
+
   async function handleCreate(): Promise<void> {
+    if (!startAction('create')) return;
     setFeedback(null);
     setErrorMessage(null);
     try {
@@ -46,24 +67,30 @@ export function RepertoriesPage({
       setErrorMessage(
         cause instanceof Error ? cause.message : 'Não foi possível criar o repertório.',
       );
+    } finally {
+      finishAction();
     }
   }
 
   async function handleRename(repertory: RepertorySummary): Promise<void> {
+    if (!startAction(`rename:${repertory.id}`)) return;
     setFeedback(null);
     setErrorMessage(null);
     try {
       await renameRepertory(repertory.id, editingName, repertory.revision);
-      setEditingId(null);
+      cancelRename(repertory.id);
       setFeedback('Nome do repertório atualizado.');
     } catch (cause: unknown) {
       setErrorMessage(
         cause instanceof Error ? cause.message : 'Não foi possível renomear o repertório.',
       );
+    } finally {
+      finishAction();
     }
   }
 
   async function handleDuplicate(repertory: RepertorySummary): Promise<void> {
+    if (!startAction(`duplicate:${repertory.id}`)) return;
     setFeedback(null);
     setErrorMessage(null);
     try {
@@ -73,11 +100,13 @@ export function RepertoriesPage({
       setErrorMessage(
         cause instanceof Error ? cause.message : 'Não foi possível duplicar o repertório.',
       );
+    } finally {
+      finishAction();
     }
   }
 
   async function handleDelete(): Promise<void> {
-    if (!pendingDelete) return;
+    if (!pendingDelete || !startAction(`delete:${pendingDelete.id}`)) return;
     setFeedback(null);
     setErrorMessage(null);
     try {
@@ -88,6 +117,8 @@ export function RepertoriesPage({
       setErrorMessage(
         cause instanceof Error ? cause.message : 'Não foi possível excluir o repertório.',
       );
+    } finally {
+      finishAction();
     }
   }
 
@@ -119,9 +150,12 @@ export function RepertoriesPage({
             placeholder="Ex.: Set acústico de sábado"
           />
         </label>
-        <Button onClick={() => void handleCreate()} disabled={!name.trim()}>
+        <Button
+          onClick={() => void handleCreate()}
+          disabled={!name.trim() || pendingAction !== null}
+        >
           <Plus size={17} />
-          Criar repertório
+          {pendingAction === 'create' ? 'Criando…' : 'Criar repertório'}
         </Button>
       </section>
 
@@ -177,13 +211,32 @@ export function RepertoriesPage({
                     <input
                       value={editingName}
                       onChange={(event) => setEditingName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          void handleRename(repertory);
+                        }
+                        if (event.key === 'Escape') {
+                          event.preventDefault();
+                          cancelRename(repertory.id);
+                        }
+                      }}
                       autoFocus
                     />
                   </label>
-                  <Button size="sm" onClick={() => void handleRename(repertory)}>
-                    Salvar
+                  <Button
+                    size="sm"
+                    onClick={() => void handleRename(repertory)}
+                    disabled={pendingAction !== null}
+                  >
+                    {pendingAction === `rename:${repertory.id}` ? 'Salvando…' : 'Salvar'}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => cancelRename(repertory.id)}
+                    disabled={pendingAction !== null}
+                  >
                     Cancelar
                   </Button>
                 </div>
@@ -211,7 +264,15 @@ export function RepertoriesPage({
                     <span className={styles.srOnly}>Tocar {repertory.name}</span>
                   </button>
                   <button
+                    ref={(node) => {
+                      if (!node) return;
+                      if (focusRenameIdRef.current === repertory.id) {
+                        focusRenameIdRef.current = null;
+                        node.focus();
+                      }
+                    }}
                     type="button"
+                    disabled={pendingAction !== null}
                     onClick={() => {
                       setEditingId(repertory.id);
                       setEditingName(repertory.name);
@@ -220,11 +281,19 @@ export function RepertoriesPage({
                     <Pencil size={16} />
                     <span className={styles.srOnly}>Renomear {repertory.name}</span>
                   </button>
-                  <button type="button" onClick={() => void handleDuplicate(repertory)}>
+                  <button
+                    type="button"
+                    disabled={pendingAction !== null}
+                    onClick={() => void handleDuplicate(repertory)}
+                  >
                     <Copy size={16} />
                     <span className={styles.srOnly}>Duplicar {repertory.name}</span>
                   </button>
-                  <button type="button" onClick={() => setPendingDelete(repertory)}>
+                  <button
+                    type="button"
+                    disabled={pendingAction !== null}
+                    onClick={() => setPendingDelete(repertory)}
+                  >
                     <Trash2 size={16} />
                     <span className={styles.srOnly}>Excluir {repertory.name}</span>
                   </button>
@@ -237,11 +306,20 @@ export function RepertoriesPage({
                   aria-label={`Confirmar exclusão de ${repertory.name}`}
                 >
                   <span>Excluir este repertório?</span>
-                  <Button size="sm" variant="secondary" onClick={() => setPendingDelete(null)}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setPendingDelete(null)}
+                    disabled={pendingAction !== null}
+                  >
                     Manter
                   </Button>
-                  <Button size="sm" onClick={() => void handleDelete()}>
-                    Excluir
+                  <Button
+                    size="sm"
+                    onClick={() => void handleDelete()}
+                    disabled={pendingAction !== null}
+                  >
+                    {pendingAction === `delete:${repertory.id}` ? 'Excluindo…' : 'Excluir'}
                   </Button>
                 </div>
               ) : null}

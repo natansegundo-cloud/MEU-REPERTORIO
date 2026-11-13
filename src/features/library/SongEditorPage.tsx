@@ -1,5 +1,5 @@
 import { ArrowLeft, Save, TriangleAlert } from 'lucide-react';
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { parseTonality } from '@/features/transpose';
@@ -69,6 +69,8 @@ export function SongEditorPage({ songId, onBack, onDirtyChange }: SongEditorPage
   const [draftOverride, setDraftOverride] = useState<SongDraft | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const draft = draftOverride ?? (song ? draftFromSong(song) : null);
   const dirty = draftOverride !== null;
@@ -98,7 +100,7 @@ export function SongEditorPage({ songId, onBack, onDirtyChange }: SongEditorPage
   }
 
   async function handleSave(): Promise<void> {
-    if (!song || !draft) return;
+    if (!song || !draft || savingRef.current) return;
     setFeedback(null);
     setSaveError(null);
 
@@ -117,6 +119,8 @@ export function SongEditorPage({ songId, onBack, onDirtyChange }: SongEditorPage
       return;
     }
 
+    savingRef.current = true;
+    setSaving(true);
     try {
       await updateSong(
         song.id,
@@ -141,6 +145,9 @@ export function SongEditorPage({ songId, onBack, onDirtyChange }: SongEditorPage
           cause instanceof Error ? cause.message : 'Não foi possível salvar as alterações.',
         );
       }
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
@@ -172,9 +179,9 @@ export function SongEditorPage({ songId, onBack, onDirtyChange }: SongEditorPage
             Altere letra, cifras e informações sem perder a estrutura.
           </p>
         </div>
-        <Button onClick={() => void handleSave()} disabled={!dirty}>
+        <Button onClick={() => void handleSave()} disabled={!dirty || saving}>
           <Save size={17} />
-          Salvar alterações
+          {saving ? 'Salvando…' : 'Salvar alterações'}
         </Button>
       </header>
 
@@ -376,8 +383,8 @@ export function SongEditorPage({ songId, onBack, onDirtyChange }: SongEditorPage
           <Button variant="secondary" onClick={handleBack}>
             Cancelar
           </Button>
-          <Button onClick={() => void handleSave()} disabled={!dirty}>
-            Salvar alterações
+          <Button onClick={() => void handleSave()} disabled={!dirty || saving}>
+            {saving ? 'Salvando…' : 'Salvar alterações'}
           </Button>
         </div>
       </div>

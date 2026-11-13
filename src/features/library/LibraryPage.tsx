@@ -33,6 +33,7 @@ export function LibraryPage({
   const [query, setQuery] = useState('');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const { data: songs, loading, error } = useSongs(query);
   const favoriteIds = useFavoriteIds();
   const visibleSongs = onlyFavorites ? songs.filter((song) => favoriteIds.has(song.id)) : songs;
@@ -46,6 +47,17 @@ export function LibraryPage({
       await softDeleteSong(id);
     } catch (cause: unknown) {
       setDeleteError(cause instanceof Error ? cause.message : 'Falha ao excluir a música.');
+    }
+  }
+
+  async function handleToggleFavorite(id: string): Promise<void> {
+    setFavoriteError(null);
+    try {
+      await toggleFavorite(id);
+    } catch (cause: unknown) {
+      setFavoriteError(
+        cause instanceof Error ? cause.message : 'Não foi possível atualizar o favorito.',
+      );
     }
   }
 
@@ -101,6 +113,11 @@ export function LibraryPage({
           {deleteError}
         </p>
       ) : null}
+      {favoriteError ? (
+        <p className={styles.error} role="alert">
+          {favoriteError}
+        </p>
+      ) : null}
 
       {!loading && !error && visibleSongs.length === 0 ? (
         query ? (
@@ -126,7 +143,7 @@ export function LibraryPage({
               onOpen={onOpenSong}
               onDelete={(id) => void handleDelete(id)}
               favorite={favoriteIds.has(song.id)}
-              onToggleFavorite={(id) => void toggleFavorite(id)}
+              onToggleFavorite={(id) => void handleToggleFavorite(id)}
             />
           ))}
         </div>

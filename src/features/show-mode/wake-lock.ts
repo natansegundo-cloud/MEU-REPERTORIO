@@ -25,5 +25,10 @@ export async function requestScreenWakeLock(
 }
 
 export async function releaseScreenWakeLock(handle: WakeLockHandle | null): Promise<void> {
-  if (handle) await handle.release();
+  if (!handle) return;
+  try {
+    await handle.release();
+  } catch {
+    // O bloqueio já pode ter sido liberado pelo navegador ao ocultar a página.
+  }
 }
