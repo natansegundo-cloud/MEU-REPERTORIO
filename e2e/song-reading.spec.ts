@@ -72,3 +72,37 @@ test('mantem a leitura focada e abre o diagrama sem deslocar a cifra', async ({ 
   await tone.getByRole('button', { name: 'Salvar tom' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Tom preferido salvo' })).toBeVisible();
 });
+
+test('oferece rolagem automática na leitura normal da música', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await selectLibraryAction(page, 'Adicionar música');
+  await page.getByLabel(/t.*tulo/i).fill('Rolagem na leitura');
+  const longSong = Array.from({ length: 80 }, (_, index) =>
+    index % 2 === 0 ? `Verso ${index + 1}` : 'D                 A',
+  ).join('\n');
+  await page.getByLabel(/letra e cifras/i).fill(longSong);
+  await page.getByRole('button', { name: /Importar/ }).click();
+
+  await page.getByTestId('song-card').getByRole('button').first().click();
+  await expect(page.getByRole('heading', { name: 'Rolagem na leitura' })).toBeVisible();
+
+  const speed = page.getByRole('slider', { name: 'Velocidade da rolagem' });
+  await speed.fill('5');
+  await expect(page.getByText('5 px/s', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Aumentar velocidade da rolagem em 5 px/s' }).click();
+  await expect(page.getByText('10 px/s', { exact: true })).toBeVisible();
+
+  async function scrollPosition(): Promise<number> {
+    return page.evaluate(() => (globalThis as unknown as { scrollY: number }).scrollY);
+  }
+
+  await page.getByRole('button', { name: 'Iniciar rolagem' }).click();
+  await page.waitForTimeout(600);
+  expect(await scrollPosition()).toBeGreaterThan(0);
+
+  await page.getByRole('button', { name: 'Pausar rolagem' }).click();
+  const pausedPosition = await scrollPosition();
+  await page.waitForTimeout(300);
+  expect(await scrollPosition()).toBe(pausedPosition);
+});

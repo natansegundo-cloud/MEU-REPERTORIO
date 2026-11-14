@@ -21,7 +21,13 @@ import { getPreference, setPreference, updateRepertoryItemKey } from '@/services
 import type { JsonValue } from '@/types';
 import { lockBodyScroll } from '@/utils/scroll-lock';
 
-import { SongSheet } from '@/features/songs';
+import {
+  SCROLL_SPEED_MAX,
+  SCROLL_SPEED_MIN,
+  SCROLL_SPEED_STEP,
+  SongSheet,
+  useAutoScroll,
+} from '@/features/songs';
 import { baseSongStructure, keyForShift, keyShift, keySpelling } from '@/features/songs/display';
 import { useRepertoryDetail } from '@/features/repertories/useRepertories';
 import {
@@ -32,7 +38,6 @@ import {
   type PlayableEntry,
   type ShowSession,
 } from './show-session';
-import { createScrollController, type ScrollController } from './scroll-controller';
 import {
   releaseScreenWakeLock,
   requestScreenWakeLock,
@@ -54,19 +59,8 @@ interface ShowPositionPreference {
 }
 
 const POSITION_PREFIX = 'show.repertory.';
-const SPEED_KEY = 'show.scrollSpeed';
 const DIAGRAMS_KEY = 'show.diagrams';
 const FONT_SCALE_KEY = 'show.fontScale';
-const SPEED_MIN = 20;
-const SPEED_MAX = 100;
-const SPEED_STEP = 5;
-const DEFAULT_SPEED = 40;
-
-function clampSpeed(value: number): number {
-  if (!Number.isFinite(value)) return DEFAULT_SPEED;
-  const clamped = Math.max(SPEED_MIN, Math.min(SPEED_MAX, value));
-  return Math.round(clamped / SPEED_STEP) * SPEED_STEP;
-}
 
 function positionKey(repertoryId: string): string {
   return `${POSITION_PREFIX}${repertoryId}.position`;
@@ -108,15 +102,19 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
   const [diagramSymbol, setDiagramSymbol] = useState<string | null>(null);
   const [diagramsEnabled, setDiagramsEnabled] = useState(false);
   const [fontScale, setFontScale] = useState(1);
-  const [scrollSpeed, setScrollSpeed] = useState(DEFAULT_SPEED);
-  const [autoScroll, setAutoScroll] = useState(false);
+  const {
+    speed: scrollSpeed,
+    running: autoScroll,
+    setRunning: setAutoScroll,
+    setSpeed: setScrollSpeed,
+    changeSpeed: changeScrollSpeed,
+    stop: stopScroll,
+  } = useAutoScroll();
   const [toneShifts, setToneShifts] = useState<Record<string, number | string | null>>({});
   const [toneStatus, setToneStatus] = useState<string | null>(null);
   const [toneSaving, setToneSaving] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState<boolean | null>(null);
   const [exitPending, setExitPending] = useState(false);
-  const autoScrollingUntil = useRef(0);
-  const scrollController = useRef<ScrollController | null>(null);
   const wakeLock = useRef<WakeLockHandle | null>(null);
   const toneSavingRef = useRef(false);
   const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -129,15 +127,13 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
     void Promise.all([
       getPreference<ShowPositionPreference | null>(positionKey(repertoryId), null),
       getPreference<boolean>(DIAGRAMS_KEY, false),
-      getPreference<number>(SPEED_KEY, DEFAULT_SPEED),
       getPreference<number>(FONT_SCALE_KEY, 1),
     ])
-      .then(([position, diagrams, speed, scale]) => {
+      .then(([position, diagrams, scale]) => {
         if (!active) return;
         setSavedPosition(position ?? { itemId: null, index: 0 });
         setPositionLoaded(true);
         setDiagramsEnabled(diagrams);
-        setScrollSpeed(clampSpeed(speed));
         setFontScale(Math.max(0.85, Math.min(1.25, scale)));
       })
       .catch(() => {
@@ -227,60 +223,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [exitPending, session, trackListOpen]);
-
-  useEffect(() => {
-    const controller = createScrollController(
-      {
-        now: () => performance.now(),
-        requestFrame: (callback) => requestAnimationFrame(callback),
-        cancelFrame: (frame) => cancelAnimationFrame(frame),
-        getScrollTop: () => window.scrollY,
-        getMaxScroll: () => document.documentElement.scrollHeight - window.innerHeight,
-        scrollBy: (top) => {
-          // Ignora o evento de scroll gerado pelo próprio controlador.
-          autoScrollingUntil.current = performance.now() + 180;
-          window.scrollBy(0, top);
-        },
-      },
-      DEFAULT_SPEED,
-      () => setAutoScroll(false),
-    );
-    scrollController.current = controller;
-    return () => {
-      controller.stop();
-      scrollController.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const controller = scrollController.current;
-    if (!controller) return;
-    controller.setSpeed(scrollSpeed);
-    if (autoScroll) controller.start();
-    else controller.stop();
-  }, [autoScroll, scrollSpeed]);
-
-  useEffect(() => {
-    function pauseForManualScroll(): void {
-      if (performance.now() > autoScrollingUntil.current) setAutoScroll(false);
-    }
-    function pauseForManualTouch(event: TouchEvent): void {
-      if (isInteractiveTarget(event.target)) return;
-      setAutoScroll(false);
-    }
-    // Não usamos touchstart: tocar em controles não deve pausar a rolagem.
-    // O scroll cobre roda, teclado e barra; o touchmove cobre o arrasto manual,
-    // que não pode ser distinguido pelo scroll durante a rolagem programática.
-    window.addEventListener('wheel', pauseForManualScroll, { passive: true });
-    window.addEventListener('scroll', pauseForManualScroll, { passive: true });
-    window.addEventListener('touchmove', pauseForManualTouch, { passive: true });
-    return () => {
-      window.removeEventListener('wheel', pauseForManualScroll);
-      window.removeEventListener('scroll', pauseForManualScroll);
-      window.removeEventListener('touchmove', pauseForManualTouch);
-    };
-  }, []);
+  }, [exitPending, session, setAutoScroll, trackListOpen]);
 
   useEffect(() => {
     if (!exitPending) return undefined;
@@ -398,16 +341,9 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
     }
   }
 
-  function changeScrollSpeed(direction: -1 | 1): void {
-    const value = clampSpeed(scrollSpeed + direction * SPEED_STEP);
-    if (value === scrollSpeed) return;
-    setScrollSpeed(value);
-    void setPreference(SPEED_KEY, value);
-  }
-
   function move(direction: -1 | 1): void {
     if (!session || !canMoveShowSession(session, direction)) return;
-    scrollController.current?.stop();
+    stopScroll();
     const next = moveShowSession(session, direction);
     setCurrentItemId(next.entries[next.index]?.item.id ?? null);
     setAutoScroll(false);
@@ -418,7 +354,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
 
   function jump(index: number): void {
     if (!session) return;
-    scrollController.current?.stop();
+    stopScroll();
     const next = jumpShowSession(session, index);
     setCurrentItemId(next.entries[next.index]?.item.id ?? null);
     setTrackListOpen(false);
@@ -659,7 +595,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
             type="button"
             aria-label={autoScroll ? 'Pausar rolagem' : 'Iniciar rolagem'}
             aria-pressed={autoScroll}
-            onClick={() => setAutoScroll((running) => !running)}
+            onClick={() => setAutoScroll(!autoScroll)}
           >
             {autoScroll ? <Pause size={16} /> : <Play size={16} />}
           </button>
@@ -670,29 +606,25 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
               type="button"
               aria-label="Diminuir velocidade da rolagem em 5 px/s"
               onClick={() => changeScrollSpeed(-1)}
-              disabled={scrollSpeed <= SPEED_MIN}
+              disabled={scrollSpeed <= SCROLL_SPEED_MIN}
             >
               <Minus size={16} aria-hidden="true" />
             </button>
             <input
               type="range"
-              min={SPEED_MIN}
-              max={SPEED_MAX}
-              step={SPEED_STEP}
+              min={SCROLL_SPEED_MIN}
+              max={SCROLL_SPEED_MAX}
+              step={SCROLL_SPEED_STEP}
               value={scrollSpeed}
               aria-label="Velocidade da rolagem"
-              onChange={(event) => {
-                const value = clampSpeed(Number(event.target.value));
-                setScrollSpeed(value);
-                void setPreference(SPEED_KEY, value);
-              }}
+              onChange={(event) => setScrollSpeed(Number(event.target.value))}
             />
             <button
               className={styles.speedStep}
               type="button"
               aria-label="Aumentar velocidade da rolagem em 5 px/s"
               onClick={() => changeScrollSpeed(1)}
-              disabled={scrollSpeed >= SPEED_MAX}
+              disabled={scrollSpeed >= SCROLL_SPEED_MAX}
             >
               <Plus size={16} aria-hidden="true" />
             </button>

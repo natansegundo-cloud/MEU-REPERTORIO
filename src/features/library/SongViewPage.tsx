@@ -6,6 +6,8 @@ import {
   Menu,
   MoreHorizontal,
   Minus,
+  Pause,
+  Play,
   Plus,
   Save,
 } from 'lucide-react';
@@ -24,7 +26,13 @@ import {
   updateSongPreferredKey,
 } from '@/services';
 
-import { SongSheet } from '@/features/songs';
+import {
+  SCROLL_SPEED_MAX,
+  SCROLL_SPEED_MIN,
+  SCROLL_SPEED_STEP,
+  SongSheet,
+  useAutoScroll,
+} from '@/features/songs';
 import { baseSongStructure, keyShift } from '@/features/songs/display';
 import { useSong } from './useSongs';
 import { RepertoryPicker } from './RepertoryPicker';
@@ -55,6 +63,13 @@ export function SongViewPage({
   const [exportError, setExportError] = useState<string | null>(null);
   const [diagramsEnabled, setDiagramsEnabled] = useState(false);
   const [diagramSymbol, setDiagramSymbol] = useState<string | null>(null);
+  const {
+    speed: scrollSpeed,
+    running: autoScroll,
+    setRunning: setAutoScroll,
+    setSpeed: setScrollSpeed,
+    changeSpeed: changeScrollSpeed,
+  } = useAutoScroll();
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const moreActionsRef = useRef<HTMLDivElement>(null);
   const moreActionsPanelRef = useRef<HTMLDivElement>(null);
@@ -319,6 +334,49 @@ export function SongViewPage({
           </div>
         </details>
       </div>
+
+      <section className={styles.autoScroll} aria-label="Rolagem automática">
+        <button
+          className={styles.scrollToggle}
+          type="button"
+          aria-label={autoScroll ? 'Pausar rolagem' : 'Iniciar rolagem'}
+          aria-pressed={autoScroll}
+          onClick={() => setAutoScroll(!autoScroll)}
+        >
+          {autoScroll ? <Pause size={16} /> : <Play size={16} />}
+        </button>
+        <span className={styles.scrollLabel}>Rolagem</span>
+        <button
+          className={styles.scrollStep}
+          type="button"
+          aria-label="Diminuir velocidade da rolagem em 5 px/s"
+          onClick={() => changeScrollSpeed(-1)}
+          disabled={scrollSpeed <= SCROLL_SPEED_MIN}
+        >
+          <Minus size={16} aria-hidden="true" />
+        </button>
+        <input
+          type="range"
+          min={SCROLL_SPEED_MIN}
+          max={SCROLL_SPEED_MAX}
+          step={SCROLL_SPEED_STEP}
+          value={scrollSpeed}
+          aria-label="Velocidade da rolagem"
+          onChange={(event) => setScrollSpeed(Number(event.target.value))}
+        />
+        <button
+          className={styles.scrollStep}
+          type="button"
+          aria-label="Aumentar velocidade da rolagem em 5 px/s"
+          onClick={() => changeScrollSpeed(1)}
+          disabled={scrollSpeed >= SCROLL_SPEED_MAX}
+        >
+          <Plus size={16} aria-hidden="true" />
+        </button>
+        <span className={styles.scrollValue} aria-live="polite">
+          {scrollSpeed} px/s
+        </span>
+      </section>
 
       {feedback || feedbackError ? (
         <p

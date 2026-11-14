@@ -79,6 +79,19 @@ describe('scroll controller', () => {
     expect(fake.frames.size).toBe(1);
   });
 
+  it('acumula frações de pixel para manter velocidades muito lentas estáveis', () => {
+    const fake = createRuntime();
+    const controller = createScrollController(fake.runtime, 5, vi.fn());
+
+    controller.start();
+    for (let time = 16; time <= 192; time += 16) fake.flush(time);
+    expect(fake.scrollBy).not.toHaveBeenCalled();
+
+    fake.flush(208);
+    expect(fake.scrollBy).toHaveBeenCalledTimes(1);
+    expect(fake.scrollBy).toHaveBeenCalledWith(1);
+  });
+
   it('encerra no fim da página e libera o frame pendente', () => {
     const fake = createRuntime(10);
     const onEnd = vi.fn();

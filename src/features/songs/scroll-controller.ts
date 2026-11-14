@@ -23,6 +23,7 @@ export function createScrollController(
   let frame: number | null = null;
   let running = false;
   let previous = 0;
+  let pendingScroll = 0;
 
   function stop(): void {
     running = false;
@@ -44,7 +45,14 @@ export function createScrollController(
       return;
     }
 
-    runtime.scrollBy((speed * delta) / 1000);
+    // Acumula frações de pixel para que velocidades bem lentas continuem
+    // avançando de forma estável mesmo em navegadores que arredondam o scroll.
+    pendingScroll += (speed * delta) / 1000;
+    const wholePixels = Math.trunc(pendingScroll);
+    if (wholePixels !== 0) {
+      pendingScroll -= wholePixels;
+      runtime.scrollBy(wholePixels);
+    }
     frame = runtime.requestFrame(tick);
   }
 

@@ -69,4 +69,5 @@ Validação executada:
 ## 5. Limitações
 
 - O passo é fixo em 5 px/s, conforme solicitado.
-- A velocidade continua limitada à faixa de 20 a 100 px/s já usada pela barra.
+- A faixa de velocidade foi ampliada para 5 a 100 px/s na Etapa 35, depois do
+  ajuste da leitura normal.
