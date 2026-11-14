@@ -328,7 +328,10 @@ export function recognizeLine(line: NormalizedLine): RecognizedLine {
     };
   }
 
-  const possibleChordWords = tokenCandidates(line.text, false);
+  // Cifra usa raiz maiúscula; palavras comuns como "em" não devem gerar aviso.
+  const possibleChordWords = tokenCandidates(line.text, false).filter((candidate) =>
+    /^[A-G]/u.test(candidate.rawSymbol),
+  );
   const diagnostics = possibleChordWords.some((candidate) => !isBareRoot(candidate))
     ? [
         diagnostic(

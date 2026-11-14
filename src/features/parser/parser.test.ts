@@ -102,6 +102,27 @@ E ela está chorando`);
     expect(song.diagnostics.filter((item) => item.severity === 'warning')).toEqual([]);
   });
 
+  it('não trata palavras minúsculas da letra, como “em”, como acordes ambíguos', () => {
+    const song = parseSongText(
+      [
+        'Acredite em seus desejos',
+        'Não há tempo pra viver em vão',
+        'Transformando toda noite em amor',
+      ].join('\n'),
+    );
+
+    expect(song.diagnostics.filter((item) => item.severity === 'warning')).toEqual([]);
+  });
+
+  it('continua reconhecendo linhas de cifra escritas em minúsculas', () => {
+    const song = parseSongText('c g am f\nletra da canção');
+
+    expect(song.valid).toBe(true);
+    expect(song.lines[0]?.kind).toBe('chord-lyric');
+    expect(song.lines[0]?.chords.map((chord) => chord.symbol)).toEqual(['C', 'G', 'Am', 'F']);
+    expect(song.diagnostics.filter((item) => item.severity === 'warning')).toEqual([]);
+  });
+
   it('mantém aviso para acorde ambíguo no meio da letra', () => {
     const song = parseSongText('Hoje eu vou de Am7 pra casa');
 

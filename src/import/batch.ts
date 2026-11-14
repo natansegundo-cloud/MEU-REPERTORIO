@@ -34,8 +34,21 @@ export interface BatchSegmentationResult {
   readonly usedExplicitSeparators: boolean;
 }
 
-const SEPARATOR_PATTERN = /^\s*(-{5,}|={5,}|#{5,})\s*$/u;
-const SHORT_SEPARATOR_PATTERN = /^\s*[-=#]+\s*$/u;
+/**
+ * Separadores tipográficos (travessão/meia-risca) também delimitam músicas em
+ * documentos exportados de editores de texto. A família de traços pode
+ * combinar hífen, travessão e meia-risca, mas precisa ter pelo menos cinco
+ * caracteres para não confundir uma linha musical.
+ */
+const SEPARATOR_PATTERN = /^\s*(?:[-\u2014\u2013]{5,}|={5,}|#{5,})\s*$/u;
+const SHORT_SEPARATOR_PATTERN = /^\s*[-\u2014\u2013=#]+\s*$/u;
+
+/**
+ * O mesmo conjunto de caracteres invisíveis ignorado pelo parser individual.
+ * DOCX exportados de páginas de cifra costumam prefixar cada linha com
+ * U+200B; sem esta limpeza a linha de acordes deixa de ser reconhecida.
+ */
+const INVISIBLE_CHARACTERS = /[\u200B-\u200D\u2060\uFEFF\u00AD]/gu;
 
 function pageTextPages(pages: readonly PdfPageText[]): BatchSourcePage[] {
   return pages.map((page) => ({ pageNumber: page.pageNumber, text: page.text }));
@@ -77,11 +90,47 @@ export async function extractBatchDocument(file: File): Promise<BatchDocument> {
 }
 
 function normalizeLines(text: string): string[] {
-  return text.replace(/\r\n?/gu, '\n').split('\n');
+  return text
+    .replace(/\r\n?/gu, '\n')
+    .replace(/\u00A0/gu, ' ')
+    .replace(INVISIBLE_CHARACTERS, '')
+    .split('\n');
 }
 
 function isExplicitSeparator(line: string): boolean {
   return SEPARATOR_PATTERN.test(line);
+}
+
+/** Números de página e rodapés simples não são metadados musicais. */
+function isPageFurniture(line: string): boolean {
+  const value = line.trim();
+  return (
+    /^\d{1,3}$/u.test(value) ||
+    /^p[aá]gina\s+\d+\s*$/iu.test(value) ||
+    /^cifra\s*club/iu.test(value)
+  );
+}
+
+/**
+ * Remove números de página e rodapés simples apenas nas extremidades de cada
+ * página. O conteúdo musical interno permanece intacto.
+ */
+function stripPageFurniture(pages: readonly BatchSourcePage[]): BatchSourcePage[] {
+  return pages.map((page) => {
+    const lines = normalizeLines(page.text);
+    const contentIndexes = lines.flatMap((line, index) => (line.trim() ? [index] : []));
+    const first = contentIndexes[0];
+    const last = contentIndexes[contentIndexes.length - 1];
+    const removable = new Set<number>();
+    if (first !== undefined && isPageFurniture(lines[first] ?? '')) removable.add(first);
+    if (last !== undefined && last !== first && isPageFurniture(lines[last] ?? ''))
+      removable.add(last);
+    if (removable.size === 0) return page;
+    return {
+      ...page,
+      text: lines.filter((_, index) => !removable.has(index)).join('\n'),
+    };
+  });
 }
 
 function isLikelyChordLine(line: string): boolean {
@@ -117,9 +166,28 @@ function isKeyLabel(label: string): boolean {
   return ['tom', 'key'].includes(label);
 }
 
+/**
+ * Rótulos de seção que aparecem entre parênteses em cifras exportadas de
+ * editores de texto, como "(intro 2x) riff" e "(refrão)". Reconhecê-los evita
+ * que uma linha de letra seguida de "(refrão)" seja aceita como cabeçalho.
+ */
+const PARENTHESIZED_SECTION_LABEL =
+  /^(?:intro|introdu[cç][aã]o|refr[aã]o|verse|verso|ponte|bridge|solo|instrumental|interl[uú]dio|final|outro|coda|riff)(?:\s.*)?$/iu;
+
+function isSectionLine(value: string): boolean {
+  const match = /^[[(]([^\])]*)[\])](.*)$/u.exec(value);
+  if (!match) return false;
+  const label = (match[1] ?? '').trim();
+  const rest = (match[2] ?? '').trim();
+  if (!label) return false;
+  if (PARENTHESIZED_SECTION_LABEL.test(label)) return true;
+  // Progressões escritas entre parênteses, como "( Bb7M  Eb7M )".
+  return isLikelyChordLine(label) && (!rest || isLikelyChordLine(rest));
+}
+
 function isBodyLine(line: string): boolean {
   const value = line.trim();
-  return isLikelyChordLine(value) || /^\[[^\]]+\]/u.test(value);
+  return isLikelyChordLine(value) || isSectionLine(value);
 }
 
 function nextContentIndex(lines: readonly string[], index: number): number {
@@ -147,7 +215,8 @@ function isSongHeaderStart(
   index: number,
 ): boolean {
   const title = lines[index]?.trim() ?? '';
-  if (!title || title.length > 100 || isExplicitSeparator(title)) return false;
+  if (!title || title.length > 100 || isExplicitSeparator(title) || isPageFurniture(title))
+    return false;
 
   const titleMetadata = metadataLine(title);
   if (titleMetadata && isTitleLabel(titleMetadata.label)) {
@@ -208,6 +277,17 @@ function metadataFromContent(
   return { title, artist, originalKey: explicitKey ?? null };
 }
 
+function contentWarnings(content: string): string[] {
+  const keyLabels = content.match(/^\s*(?:tom|key)\s*:/gimu)?.length ?? 0;
+  const titleLabels = content.match(/^\s*(?:t[ií]tulo|m[uú]sica|song)\s*:/gimu)?.length ?? 0;
+  const warnings: string[] = [];
+  if (keyLabels > 1)
+    warnings.push('Este bloco contém mais de um tom; ele pode ter concatenado músicas.');
+  if (titleLabels > 1)
+    warnings.push('Este bloco contém mais de um título; ele pode ter concatenado músicas.');
+  return warnings;
+}
+
 function makeSegment(
   lines: readonly string[],
   pageNumbers: readonly number[],
@@ -222,7 +302,7 @@ function makeSegment(
     content,
     pageNumbers: [...new Set(pageNumbers)].sort((left, right) => left - right),
     ...metadata,
-    warnings,
+    warnings: [...warnings, ...contentWarnings(content)],
     explicitSeparator,
   };
 }
@@ -335,6 +415,7 @@ function automaticSegments(pages: readonly BatchSourcePage[]): BatchSegmentation
 export function segmentBatchDocument(
   document: Pick<BatchDocument, 'pages'>,
 ): BatchSegmentationResult {
-  const explicit = explicitSegments(document.pages);
-  return explicit.usedExplicitSeparators ? explicit : automaticSegments(document.pages);
+  const pages = stripPageFurniture(document.pages);
+  const explicit = explicitSegments(pages);
+  return explicit.usedExplicitSeparators ? explicit : automaticSegments(pages);
 }

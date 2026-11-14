@@ -1,6 +1,6 @@
 .diagram {
   display: block;
-  width: min(100%, 11.25rem);
+  width: min(100%, 12.5rem);
   height: auto;
   margin-inline: auto;
   overflow: visible;
@@ -29,7 +29,7 @@
 .position {
   fill: var(--color-text-muted);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: var(--weight-semibold);
 }
 

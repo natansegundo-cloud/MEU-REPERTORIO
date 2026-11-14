@@ -25,6 +25,35 @@ function withKey(content: string, key: string): string {
   return `Tom: ${value}\n${content}`;
 }
 
+interface ReviewAnalysis {
+  readonly warnings: readonly string[];
+  readonly needsReview: boolean;
+}
+
+function analyzeItem(item: ReviewItem): ReviewAnalysis {
+  const parsed = parseSongText(withKey(item.content, item.originalKey ?? ''));
+  const parserWarnings = parsed.diagnostics
+    .filter((diagnostic) => diagnostic.severity === 'warning')
+    .map((diagnostic) =>
+      diagnostic.lineNumber === null
+        ? diagnostic.message
+        : `${diagnostic.message} (linha ${diagnostic.lineNumber})`,
+    );
+  const warnings = [
+    ...new Set([
+      ...item.warnings,
+      ...parserWarnings,
+      ...parsed.diagnostics
+        .filter((diagnostic) => diagnostic.severity === 'error')
+        .map((diagnostic) => diagnostic.message),
+    ]),
+  ];
+  return {
+    warnings,
+    needsReview: !item.content.trim() || !item.title?.trim() || warnings.length > 0,
+  };
+}
+
 export function BatchImportPage({ onBack, onCompleted }: BatchImportPageProps) {
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [documentWarnings, setDocumentWarnings] = useState<string[]>([]);
@@ -33,6 +62,11 @@ export function BatchImportPage({ onBack, onCompleted }: BatchImportPageProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedCount = useMemo(() => items.filter((item) => item.selected).length, [items]);
+  const analyses = useMemo(() => items.map((item) => analyzeItem(item)), [items]);
+  const reviewCount = useMemo(
+    () => analyses.filter((analysis) => analysis.needsReview).length,
+    [analyses],
+  );
 
   async function handleFile(file: File): Promise<void> {
     setReading(true);
@@ -137,8 +171,16 @@ export function BatchImportPage({ onBack, onCompleted }: BatchImportPageProps) {
       {items.length > 0 ? (
         <>
           <div className={styles.summary}>
-            <span>{items.length} blocos encontrados</span>
-            <span>{selectedCount} selecionados</span>
+            <span>
+              {items.length} música{items.length === 1 ? '' : 's'} reconhecida
+              {items.length === 1 ? '' : 's'}
+            </span>
+            <span>
+              {selectedCount} selecionada{selectedCount === 1 ? '' : 's'}
+            </span>
+            {reviewCount > 0 ? (
+              <span className={styles.reviewCount}>{reviewCount} para revisar</span>
+            ) : null}
             <button
               type="button"
               onClick={() =>
@@ -156,15 +198,17 @@ export function BatchImportPage({ onBack, onCompleted }: BatchImportPageProps) {
               Limpar seleção
             </button>
           </div>
+          {reviewCount > 0 ? (
+            <p className={styles.reviewHint}>
+              Blocos marcados como <strong>Revisar</strong> podem estar incompletos, divididos ou
+              concatenados. Confira título, artista, tom e conteúdo antes de salvar.
+            </p>
+          ) : null}
           <div className={styles.list}>
             {items.map((item, index) => {
-              const parsed = parseSongText(withKey(item.content, item.originalKey ?? ''));
-              const warnings = [
-                ...item.warnings,
-                ...parsed.diagnostics
-                  .filter((diagnostic) => diagnostic.severity === 'warning')
-                  .map((diagnostic) => diagnostic.message),
-              ];
+              const analysis = analyses[index];
+              const warnings = analysis?.warnings ?? [];
+              const needsReview = analysis?.needsReview ?? false;
               return (
                 <article className={styles.card} key={item.id}>
                   <div className={styles.cardHeader}>
@@ -172,11 +216,12 @@ export function BatchImportPage({ onBack, onCompleted }: BatchImportPageProps) {
                       type="checkbox"
                       checked={item.selected}
                       onChange={(event) => update(index, { selected: event.target.checked })}
-                      aria-label={`Selecionar ${item.title ?? `bloco ${index + 1}`}`}
+                      aria-label={`Selecionar ${item.title ?? `música ${index + 1}`}`}
                     />
                     <span className={styles.cardTitle}>
-                      Bloco {index + 1} · páginas {item.pageNumbers.join(', ')}
+                      Música {index + 1} · páginas {item.pageNumbers.join(', ')}
                     </span>
+                    {needsReview ? <span className={styles.reviewBadge}>Revisar</span> : null}
                   </div>
                   <div className={styles.grid}>
                     <label>

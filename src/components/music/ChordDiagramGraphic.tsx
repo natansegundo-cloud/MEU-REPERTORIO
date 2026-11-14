@@ -10,13 +10,15 @@ const STRING_COUNT = 6;
 const FRET_COUNT = 5;
 const STRING_GAP = 16;
 const FRET_GAP = 18;
-const LEFT = 24;
+const LABELED_LEFT = 40;
+const CENTERED_LEFT = 30;
+const RIGHT = 20;
 const TOP = 28;
-const WIDTH = LEFT + (STRING_COUNT - 1) * STRING_GAP + 12;
+const WIDTH = LABELED_LEFT + (STRING_COUNT - 1) * STRING_GAP + RIGHT;
 const HEIGHT = TOP + FRET_COUNT * FRET_GAP + 8;
 
-function stringX(stringIndex: number): number {
-  return LEFT + stringIndex * STRING_GAP;
+function stringX(stringIndex: number, left: number): number {
+  return left + stringIndex * STRING_GAP;
 }
 
 function fretY(fret: number, baseFret: number): number {
@@ -27,9 +29,22 @@ function markerY(fret: number, baseFret: number): number {
   return fretY(fret, baseFret);
 }
 
+/**
+ * Janela visual de cinco casas. Acordes que cabem nas cinco primeiras casas
+ * são sempre desenhados desde o início do braço; os demais começam na menor
+ * casa pressionada, para não perder nenhuma nota do desenho.
+ */
+function visibleBaseFret(voicing: ChordVoicing): number {
+  const highestFret = voicing.frets.reduce((highest, fret) => Math.max(highest, fret), 0);
+  return highestFret > FRET_COUNT ? voicing.baseFret : 1;
+}
+
 export function ChordDiagramGraphic({ voicing }: ChordDiagramGraphicProps) {
-  const { baseFret, barre } = voicing;
-  const openPosition = baseFret === 1;
+  const { barre } = voicing;
+  const baseFret = visibleBaseFret(voicing);
+  const showNut = baseFret === 1;
+  // Sem rótulo o braço fica centralizado; com rótulo abre-se a calha à esquerda.
+  const left = showNut ? CENTERED_LEFT : LABELED_LEFT;
 
   return (
     <svg
@@ -37,6 +52,8 @@ export function ChordDiagramGraphic({ voicing }: ChordDiagramGraphicProps) {
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
       aria-label={`Diagrama de ${voicing.symbol}`}
+      data-fret-count={FRET_COUNT}
+      data-base-fret={baseFret}
       focusable="false"
     >
       <g className={styles.grid} aria-hidden="true">
@@ -44,9 +61,9 @@ export function ChordDiagramGraphic({ voicing }: ChordDiagramGraphicProps) {
           <line
             key={`string-${index}`}
             className={styles.string}
-            x1={stringX(index)}
+            x1={stringX(index, left)}
             y1={TOP}
-            x2={stringX(index)}
+            x2={stringX(index, left)}
             y2={TOP + FRET_COUNT * FRET_GAP}
           />
         ))}
@@ -54,31 +71,36 @@ export function ChordDiagramGraphic({ voicing }: ChordDiagramGraphicProps) {
           <line
             key={`fret-${index}`}
             className={styles.fret}
-            x1={LEFT}
+            x1={left}
             y1={TOP + index * FRET_GAP}
-            x2={stringX(STRING_COUNT - 1)}
+            x2={stringX(STRING_COUNT - 1, left)}
             y2={TOP + index * FRET_GAP}
           />
         ))}
       </g>
 
-      {openPosition ? (
+      {showNut ? (
         <line
           className={styles.nut}
-          x1={LEFT}
+          x1={left}
           y1={TOP}
-          x2={stringX(STRING_COUNT - 1)}
+          x2={stringX(STRING_COUNT - 1, left)}
           y2={TOP}
           aria-hidden="true"
         />
       ) : (
-        <text className={styles.position} x={12} y={TOP + FRET_GAP / 2} textAnchor="middle">
-          {baseFret}ª
+        <text
+          className={styles.position}
+          x={LABELED_LEFT - 4}
+          y={TOP + FRET_GAP / 2}
+          textAnchor="end"
+        >
+          Casa {baseFret}
         </text>
       )}
 
       {voicing.strings.map((stringPosition) => {
-        const x = stringX(stringPosition.stringIndex);
+        const x = stringX(stringPosition.stringIndex, left);
 
         if (stringPosition.state === 'muted') {
           return (
@@ -145,14 +167,14 @@ export function ChordDiagramGraphic({ voicing }: ChordDiagramGraphicProps) {
         <g aria-hidden="true">
           <line
             className={styles.barre}
-            x1={stringX(barre.fromStringIndex)}
-            x2={stringX(barre.toStringIndex)}
+            x1={stringX(barre.fromStringIndex, left)}
+            x2={stringX(barre.toStringIndex, left)}
             y1={markerY(barre.fret, baseFret)}
             y2={markerY(barre.fret, baseFret)}
           />
           <text
             className={styles.barreLabel}
-            x={(stringX(barre.fromStringIndex) + stringX(barre.toStringIndex)) / 2}
+            x={(stringX(barre.fromStringIndex, left) + stringX(barre.toStringIndex, left)) / 2}
             y={markerY(barre.fret, baseFret) + 0.5}
             textAnchor="middle"
             dominantBaseline="central"
