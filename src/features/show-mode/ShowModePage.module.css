@@ -244,6 +244,25 @@
   accent-color: var(--color-stage-accent);
 }
 
+.navigation button.speedStep {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  max-width: none;
+  place-items: center;
+  padding: 0;
+  border-color: var(--color-stage-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-stage-surface);
+  color: var(--color-stage-muted);
+}
+
+.navigation button.speedStep:hover:not(:disabled) {
+  border-color: var(--color-stage-accent);
+  color: var(--color-stage-accent);
+}
+
 .navigation button {
   max-width: min(34vw, 14rem);
   min-width: 0;
@@ -405,5 +424,11 @@
   .navigation button {
     max-width: 38vw;
     padding: 0 var(--space-2);
+  }
+}
+
+@media (max-width: 420px) {
+  .scrollLabel {
+    display: none;
   }
 }

@@ -57,7 +57,16 @@ const POSITION_PREFIX = 'show.repertory.';
 const SPEED_KEY = 'show.scrollSpeed';
 const DIAGRAMS_KEY = 'show.diagrams';
 const FONT_SCALE_KEY = 'show.fontScale';
-const DEFAULT_SPEED = 42;
+const SPEED_MIN = 20;
+const SPEED_MAX = 100;
+const SPEED_STEP = 5;
+const DEFAULT_SPEED = 40;
+
+function clampSpeed(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_SPEED;
+  const clamped = Math.max(SPEED_MIN, Math.min(SPEED_MAX, value));
+  return Math.round(clamped / SPEED_STEP) * SPEED_STEP;
+}
 
 function positionKey(repertoryId: string): string {
   return `${POSITION_PREFIX}${repertoryId}.position`;
@@ -128,7 +137,7 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
         setSavedPosition(position ?? { itemId: null, index: 0 });
         setPositionLoaded(true);
         setDiagramsEnabled(diagrams);
-        setScrollSpeed(Math.max(20, Math.min(100, speed)));
+        setScrollSpeed(clampSpeed(speed));
         setFontScale(Math.max(0.85, Math.min(1.25, scale)));
       })
       .catch(() => {
@@ -389,6 +398,13 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
     }
   }
 
+  function changeScrollSpeed(direction: -1 | 1): void {
+    const value = clampSpeed(scrollSpeed + direction * SPEED_STEP);
+    if (value === scrollSpeed) return;
+    setScrollSpeed(value);
+    void setPreference(SPEED_KEY, value);
+  }
+
   function move(direction: -1 | 1): void {
     if (!session || !canMoveShowSession(session, direction)) return;
     scrollController.current?.stop();
@@ -647,25 +663,43 @@ export function ShowModePage({ repertoryId, requestedItemId, onExit }: ShowModeP
           >
             {autoScroll ? <Pause size={16} /> : <Play size={16} />}
           </button>
-          <label className={styles.scrollSpeed}>
+          <div className={styles.scrollSpeed}>
             <span className={styles.scrollLabel}>Rolagem</span>
+            <button
+              className={styles.speedStep}
+              type="button"
+              aria-label="Diminuir velocidade da rolagem em 5 px/s"
+              onClick={() => changeScrollSpeed(-1)}
+              disabled={scrollSpeed <= SPEED_MIN}
+            >
+              <Minus size={16} aria-hidden="true" />
+            </button>
             <input
               type="range"
-              min="20"
-              max="100"
-              step="5"
+              min={SPEED_MIN}
+              max={SPEED_MAX}
+              step={SPEED_STEP}
               value={scrollSpeed}
               aria-label="Velocidade da rolagem"
               onChange={(event) => {
-                const value = Number(event.target.value);
+                const value = clampSpeed(Number(event.target.value));
                 setScrollSpeed(value);
                 void setPreference(SPEED_KEY, value);
               }}
             />
+            <button
+              className={styles.speedStep}
+              type="button"
+              aria-label="Aumentar velocidade da rolagem em 5 px/s"
+              onClick={() => changeScrollSpeed(1)}
+              disabled={scrollSpeed >= SPEED_MAX}
+            >
+              <Plus size={16} aria-hidden="true" />
+            </button>
             <span className={styles.scrollValue} aria-live="polite">
               {scrollSpeed} px/s
             </span>
-          </label>
+          </div>
         </div>
         <div className={styles.navRow}>
           <button type="button" onClick={() => move(-1)} disabled={!previousAvailable}>

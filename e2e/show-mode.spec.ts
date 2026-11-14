@@ -158,6 +158,19 @@ test('controla a rolagem pela barra persistente sem perder a posição', async (
   const speed = page.getByRole('slider', { name: 'Velocidade da rolagem' });
   await speed.fill('80');
   await expect(page.getByText('80 px/s', { exact: true })).toBeVisible();
+
+  const increaseSpeed = page.getByRole('button', {
+    name: 'Aumentar velocidade da rolagem em 5 px/s',
+  });
+  const decreaseSpeed = page.getByRole('button', {
+    name: 'Diminuir velocidade da rolagem em 5 px/s',
+  });
+  await increaseSpeed.click();
+  await increaseSpeed.click();
+  await expect(page.getByText('90 px/s', { exact: true })).toBeVisible();
+  await decreaseSpeed.click();
+  await expect(page.getByText('85 px/s', { exact: true })).toBeVisible();
+
   await page.getByRole('button', { name: 'Iniciar rolagem' }).click();
   await page.waitForTimeout(350);
   expect(await getScrollY(page)).toBeGreaterThan(pausedPosition);
