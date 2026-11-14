@@ -25,6 +25,20 @@ afterEach(async () => {
 });
 
 describe('library integration', () => {
+  it('preenche título, artista e tom a partir do conteúdo colado', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await openSongImport(user);
+    const content = screen.getByLabelText(/letra e cifras/i);
+    await user.click(content);
+    await user.paste('Praia Dos Golfinhos\nNatiruts\nTom: E\nE7+/9           A7+\nTempo ensinou');
+
+    expect(screen.getByLabelText(/título/i)).toHaveValue('Praia Dos Golfinhos');
+    expect(screen.getByLabelText(/artista/i)).toHaveValue('Natiruts');
+    expect(screen.getByLabelText(/tom original/i)).toHaveValue('E');
+  });
+
   it('importa, pesquisa, abre e exclui uma música pela interface', async () => {
     const user = userEvent.setup();
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);

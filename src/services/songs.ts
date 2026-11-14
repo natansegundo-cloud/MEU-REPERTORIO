@@ -91,6 +91,51 @@ function textOverride(value: string | undefined): string | null {
   return normalized ? normalized : null;
 }
 
+const UNTITLED_SONG_TITLE = 'Música sem título';
+
+/**
+ * Compara textos ignorando caixa, acentos e variações de espaço em branco.
+ * Usado apenas para detectar reimportações da mesma música.
+ */
+function comparisonValue(value: string | null | undefined): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .toLocaleLowerCase('pt-BR');
+}
+
+/**
+ * Gera assinaturas de duplicidade. O corpo musical é comparado separadamente
+ * do texto original para reconhecer a mesma música mesmo quando o cabeçalho
+ * (título, artista ou tom) muda. Título + artista só bloqueiam quando ambos
+ * são informados, evitando falsos positivos de músicas sem artista.
+ */
+function duplicateKeys(song: Song): string[] {
+  const keys: string[] = [];
+  const content = comparisonValue(song.content);
+  if (content) keys.push(`content:${content}`);
+
+  const body = comparisonValue(song.structure.body);
+  if (body) keys.push(`body:${body}`);
+
+  const title = comparisonValue(song.title);
+  const artist = comparisonValue(song.artist);
+  if (title && title !== comparisonValue(UNTITLED_SONG_TITLE) && artist) {
+    keys.push(`identity:${title}\u0000${artist}`);
+  }
+
+  return keys;
+}
+
+function findDuplicate(candidate: Song, existing: readonly Song[]): Song | undefined {
+  const candidateKeys = new Set(duplicateKeys(candidate));
+  if (candidateKeys.size === 0) return undefined;
+
+  return existing.find((song) => duplicateKeys(song).some((key) => candidateKeys.has(key)));
+}
+
 function capoNumber(value: string | null): number | null {
   if (!value) return null;
   const match = /\d+/u.exec(value);
@@ -99,7 +144,7 @@ function capoNumber(value: string | null): number | null {
 }
 
 function applyMetadata(parsed: ParsedSong, overrides: SongMetadataOverrides): ParsedSong {
-  const title = textOverride(overrides.title) ?? parsed.title ?? 'Música sem título';
+  const title = textOverride(overrides.title) ?? parsed.title ?? UNTITLED_SONG_TITLE;
   const artist = textOverride(overrides.artist) ?? parsed.artist;
 
   return {
@@ -114,7 +159,7 @@ function toSong(parsed: ParsedSong): Song {
   const timestamp = now();
   return {
     id: createId(),
-    title: parsed.title ?? 'Música sem título',
+    title: parsed.title ?? UNTITLED_SONG_TITLE,
     artist: parsed.artist,
     originalKey: parsed.originalKey,
     currentKey: parsed.currentKey,
@@ -197,9 +242,8 @@ export async function importSong(
   await openDatabase();
 
   const saved = await db.transaction('rw', db.songs, async () => {
-    const duplicate = await db.songs
-      .filter((candidate) => candidate.deletedAt === null && candidate.content === song.content)
-      .first();
+    const existing = await db.songs.filter((candidate) => candidate.deletedAt === null).toArray();
+    const duplicate = findDuplicate(song, existing);
     if (duplicate) throw new SongAlreadyExistsError(duplicate.id);
 
     await db.songs.add(song);
@@ -222,16 +266,17 @@ export async function importSongsBatch(
 
   const result = await db.transaction('rw', db.songs, async () => {
     const existing = await db.songs.filter((song) => song.deletedAt === null).toArray();
-    const knownContent = new Set(existing.map((song) => song.content));
+    const knownKeys = new Set(existing.flatMap((song) => duplicateKeys(song)));
     const saved: Song[] = [];
     const duplicates: string[] = [];
     for (const item of prepared) {
-      if (knownContent.has(item.song.content)) {
+      const keys = duplicateKeys(item.song);
+      if (keys.some((key) => knownKeys.has(key))) {
         duplicates.push(item.song.title);
         continue;
       }
       await db.songs.add(item.song);
-      knownContent.add(item.song.content);
+      for (const key of keys) knownKeys.add(key);
       saved.push(item.song);
     }
     return { saved, duplicates };

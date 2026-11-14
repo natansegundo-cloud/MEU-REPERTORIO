@@ -83,7 +83,7 @@ Quando não há separadores, a divisão estrutural é conservadora e cada bloco 
 
 O serviço `importSongsBatch` valida todos os blocos antes da gravação e utiliza uma única transação Dexie para os itens selecionados. Se qualquer item for inválido, nenhum item do lote é gravado.
 
-Conteúdo original idêntico a uma música ativa existente, ou a outro item do mesmo lote, é tratado como duplicata e não sobrescreve a música anterior. O restante do lote pode ser salvo, e a biblioteca mantém seus identificadores, estrutura e dados existentes.
+A comparação ignora caixa, acentos e variações de espaço em branco. São consideradas duplicatas: o mesmo conteúdo original, o mesmo corpo musical (mesmo que o título/artista informado mude) ou o mesmo par título + artista quando ambos estão preenchidos. Título e artista só bloqueiam juntos, para não impedir músicas homônimas de artistas diferentes. Conteúdo idêntico a uma música ativa existente, ou a outro item do mesmo lote, não sobrescreve a música anterior. O restante do lote pode ser salvo, e a biblioteca mantém seus identificadores, estrutura e dados existentes.
 
 As músicas salvas usam o mesmo `importSong`/`Song` e os mesmos campos de sincronização local do fluxo unitário. Não há alteração de tabelas, migrations ou dados existentes.
 

@@ -138,15 +138,16 @@ export function ImportSongPage({ onBack, onImported, onBatch }: ImportSongPagePr
       const isPdf = file.type === 'application/pdf' || /\.pdf$/iu.test(file.name);
       const pdfDocument = isPdf ? await extractPdfDocument(file) : null;
       const text = pdfDocument?.text ?? (await readTextFile(file));
+      const preview = parseSongText(text);
       setContent(text);
       setKeyDraft(null);
       const fallback = isPdf
         ? fallbackPdfMetadata(file.name)
         : { title: file.name.replace(/\.(?:txt|pdf)$/iu, ''), artist: null };
       if (!title.trim()) {
-        setTitle(pdfDocument?.title ?? fallback.title ?? '');
+        setTitle(pdfDocument?.title ?? preview.title ?? fallback.title ?? '');
       }
-      if (!artist.trim()) setArtist(pdfDocument?.artist ?? fallback.artist ?? '');
+      if (!artist.trim()) setArtist(pdfDocument?.artist ?? preview.artist ?? fallback.artist ?? '');
       if (!notes.trim() && pdfDocument?.notes) setNotes(pdfDocument.notes);
       setFeedback(
         isPdf
@@ -277,8 +278,14 @@ export function ImportSongPage({ onBack, onImported, onBatch }: ImportSongPagePr
             required
             value={content}
             onChange={(event) => {
-              setContent(event.target.value);
+              const value = event.target.value;
+              setContent(value);
               setKeyDraft(null);
+              if (title.trim() && artist.trim()) return;
+              const preview = value.trim() ? parseSongText(value) : null;
+              if (!preview) return;
+              if (!title.trim()) setTitle(preview.title ?? '');
+              if (!artist.trim()) setArtist(preview.artist ?? '');
             }}
             placeholder={'Cole aqui a cifra completa…\n\nTom: A\nA7M        E/G#\nMinha letra'}
             rows={16}

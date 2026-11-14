@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import type { ParsedSong, ParsedSongLine } from '@/types';
+import { trimBlankEdges } from '@/utils/trim-blank-edges';
 
 import styles from './SongSheet.module.css';
 
@@ -65,6 +66,8 @@ export function SongSheet({
   variant = 'default',
   onChordSelect,
 }: SongSheetProps) {
+  const lines = trimBlankEdges(structure.lines, (line) => line.kind === 'blank');
+
   return (
     <main
       className={styles.sheet}
@@ -72,7 +75,7 @@ export function SongSheet({
       aria-label={title ? `Conteúdo de ${title}` : 'Conteúdo da música'}
       style={{ '--song-font-scale': fontScale } as CSSProperties}
     >
-      {structure.lines.map((line, lineIndex) => {
+      {lines.map((line, lineIndex) => {
         const key = `${line.lineNumber}-${lineIndex}`;
         if (line.kind === 'blank') return <div className={styles.blank} key={key} />;
         if (line.kind === 'section') {

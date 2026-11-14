@@ -73,6 +73,52 @@ Minha letra`);
     });
   });
 
+  it('reconhece duplicata mesmo com espaços e quebras de linha diferentes', async () => {
+    const song = await importSong('Tom: C\n\nC   G\nA letra', {
+      title: 'Canção',
+      artist: 'Artista',
+    });
+
+    await expect(
+      importSong('\n\nC   G\nA letra\n\n', { title: 'Canção', artist: 'Artista' }),
+    ).rejects.toMatchObject({ name: 'SongAlreadyExistsError', songId: song.id });
+  });
+
+  it('reconhece duplicata pelo corpo quando o título informado muda', async () => {
+    const song = await importSong('C\nA letra', { title: 'Primeira', artist: 'Artista' });
+
+    await expect(
+      importSong('\nC\nA letra\n', { title: 'Segunda', artist: 'Artista' }),
+    ).rejects.toMatchObject({ name: 'SongAlreadyExistsError', songId: song.id });
+  });
+
+  it('reconhece duplicata por título e artista mesmo com conteúdo diferente', async () => {
+    const song = await importSong('C\nPrimeira letra', { title: 'Mesma', artist: 'Artista' });
+
+    await expect(
+      importSong('G\nOutra letra', { title: 'Mesma', artist: 'Artista' }),
+    ).rejects.toMatchObject({ name: 'SongAlreadyExistsError', songId: song.id });
+  });
+
+  it('permite músicas homônimas de artistas diferentes', async () => {
+    await importSong('C\nLetra um', { title: 'Homônima', artist: 'Artista A' });
+    const second = await importSong('G\nLetra dois', { title: 'Homônima', artist: 'Artista B' });
+
+    expect(second.title).toBe('Homônima');
+    expect(await listSongs()).toHaveLength(2);
+  });
+
+  it('reconhece duplicata dentro do próprio lote', async () => {
+    const result = await importSongsBatch([
+      { content: 'C\nA letra', title: 'Primeira', artist: 'Artista' },
+      { content: '\n\nC\nA letra\n', title: 'Segunda', artist: 'Artista' },
+    ]);
+
+    expect(result.saved.map((song) => song.title)).toEqual(['Primeira']);
+    expect(result.duplicates).toEqual(['Segunda']);
+    expect(await listSongs()).toHaveLength(1);
+  });
+
   it('salva um lote atomicamente e ignora conteúdos duplicados', async () => {
     await importSong('C\nJá existe', { title: 'Local' });
     const result = await importSongsBatch([
