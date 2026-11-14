@@ -54,6 +54,20 @@ describe('acordes', () => {
     }
   });
 
+  it('interpreta extensão após barra sem confundir com inversão', () => {
+    const chord = parseChord('E7+/9');
+
+    expect(chord).not.toBeNull();
+    expect(chord?.symbol).toBe('E7+/9');
+    expect(chord?.root.name).toBe('E');
+    expect(chord?.bass).toBeNull();
+    expect(chord?.quality.kind).toBe('augmented');
+    expect(chord?.quality.seventh).toBe(10);
+    expect(chord?.quality.extensions.map((extension) => extension.degree)).toContain(9);
+    expect(parseChord('A7+/9')?.bass).toBeNull();
+    expect(parseChord('E7+/G#')?.bass?.name).toBe('G#');
+  });
+
   it('classifica diminutos, aumentados e suspensos', () => {
     expect(parseChord('Bbº')?.quality.kind).toBe('diminished');
     expect(parseChord('Cø7')?.quality.kind).toBe('half-diminished');

@@ -43,6 +43,15 @@ A correção centraliza a remoção dos caracteres invisíveis no lote, reconhec
 
 Na segmentação automática, marcadores de seção entre parênteses (`(intro 2x) riff`, `(refrão)`) também contam como corpo musical. Isso permite reconhecer um cabeçalho cuja intro vem antes do primeiro acorde e impede que uma linha de letra seguida de `(refrão)` seja confundida com um novo título. O documento `CIFRAS.docx`, sem separadores, permanece com 3 músicas (`Au de Cabeça`/Fm, `Caraíva`/B, `Dois Planetas`/Gm) e as 180 linhas úteis preservadas.
 
+O parser musical também passou a reconhecer sem aviso:
+
+- extensão depois da barra, como `E7+/9` e `A7+/9` (sem confundir com inversão, como `E7+/G#`);
+- progressões entre parênteses, como `( Bb7M  Eb7M )`;
+- rótulos de seção seguidos de dois-pontos, como `Intro: ( Gm Cm7 Dm7 )` e `introdução: Am7 Dm Am7 Dm.`;
+- palavras como `Em` em linhas de letra, que antes podiam ser confundidas com Mi menor.
+
+Com isso, o documento real passou de 35 para 1 advertência de classificação. A restante é uma linha de acorde com anotação livre entre parênteses, que permanece sinalizada para revisão.
+
 ## Segmentação
 
 A prioridade é deliberada:

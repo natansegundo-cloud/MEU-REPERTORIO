@@ -123,6 +123,50 @@ E ela está chorando`);
     expect(song.diagnostics.filter((item) => item.severity === 'warning')).toEqual([]);
   });
 
+  it('não avisa em acordes com extensão após barra nem em progressões entre parênteses', () => {
+    const song = parseSongText(
+      [
+        'Praia Dos Golfinhos',
+        'Natiruts',
+        'Tom: E',
+        '[Intro] E7+/9 A7+',
+        'E7+/9           A7+',
+        'Tempo ensinou,  pra ter liberdade',
+        '( Bb7M  Eb7M )',
+        '( A7(4/9)  D7M(9) )',
+      ].join('\n'),
+    );
+
+    expect(song.valid).toBe(true);
+    expect(song.diagnostics.filter((item) => item.severity === 'warning')).toEqual([]);
+    expect(song.lines.some((line) => line.kind === 'chords')).toBe(true);
+    expect(song.lines.some((line) => line.chords.some((chord) => chord.symbol === 'E7+/9'))).toBe(
+      true,
+    );
+  });
+
+  it('reconhece intro rotulada com acordes e não avisa', () => {
+    const song = parseSongText(
+      [
+        'Verbalize',
+        'Natiruts',
+        'Tom: Bb',
+        'Intro:   ( Gm Cm7 Dm7 )',
+        'introdução: Am7 Dm Am7 Dm.',
+      ].join('\n'),
+    );
+
+    expect(song.valid).toBe(true);
+    expect(song.diagnostics.filter((item) => item.severity === 'warning')).toEqual([]);
+    expect(song.lines.filter((line) => line.kind === 'chords')).toHaveLength(2);
+  });
+
+  it('não avisa quando “Em” é palavra de uma linha de letra', () => {
+    const song = parseSongText(['Em paz eu quero estar', 'Em forma de canção'].join('\n'));
+
+    expect(song.diagnostics.filter((item) => item.severity === 'warning')).toEqual([]);
+  });
+
   it('mantém aviso para acorde ambíguo no meio da letra', () => {
     const song = parseSongText('Hoje eu vou de Am7 pra casa');
 

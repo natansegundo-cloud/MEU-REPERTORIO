@@ -82,6 +82,17 @@ function validSuffix(value: string): boolean {
   return depth === 0 && SUFFIX_WORDS.test(value);
 }
 
+/**
+ * Em cifras brasileiras, "/9" depois do acorde costuma indicar extensão
+ * (ex.: E7+/9), não uma inversão. A inversão só existe quando o texto após a
+ * barra é uma nota (ex.: E7/G#).
+ */
+const SLASH_EXTENSION = /^[#b]?(?:2|4|5|6|7|9|11|13)$/u;
+
+function isSlashExtension(value: string): boolean {
+  return SLASH_EXTENSION.test(value);
+}
+
 function uniqueIntervals(values: readonly (number | null)[]): PitchClass[] {
   return [
     ...new Set(
@@ -237,14 +248,19 @@ export function parseChord(value: string): ParsedChord | null {
   const slash = findOuterSlash(rest);
   if (slash === -2) return null;
 
-  const suffix = slash >= 0 ? rest.slice(0, slash) : rest;
+  const suffixPart = slash >= 0 ? rest.slice(0, slash) : rest;
   const bassText = slash >= 0 ? rest.slice(slash + 1) : '';
   const bass = bassText ? parseNote(bassText) : null;
+  const extensionSlash = slash >= 0 && !bass && isSlashExtension(bassText);
 
-  if (slash >= 0 && !bass) return null;
+  if (slash >= 0 && !bass && !extensionSlash) return null;
+
+  const suffix = extensionSlash ? `${suffixPart}${bassText}` : suffixPart;
   if (!validSuffix(suffix)) return null;
 
-  const symbol = `${root.name}${suffix}${bass ? `/${bass.name}` : ''}`;
+  const symbol = extensionSlash
+    ? `${root.name}${suffixPart}/${bassText}`
+    : `${root.name}${suffix}${bass ? `/${bass.name}` : ''}`;
 
   return {
     original,

@@ -123,6 +123,30 @@ parser individual, que aceitava raiz minúscula.
 - nenhuma alteração em transposição, geração de diagramas ou estrutura da
   música.
 
+### 5.2.1. Ajuste dos avisos falsos após a homologação
+
+Músicas como `Praia Dos Golfinhos` continuavam marcadas como **Revisar** por
+causa de acordes válidos que o parser não reconhecia:
+
+- `E7+/9` era interpretado como acorde com baixo `9`; como `9` não é uma nota,
+  a linha inteira virava “token ambíguo”;
+- progressões entre parênteses, como `( Bb7M  Eb7M )` e
+  `Intro: ( Gm Cm7 Dm7 )`, não eram aceitas como linha de cifra;
+- palavras portuguesas como `Em` (de “Em paz”) coincidiam com Mi menor.
+
+Correções aplicadas:
+
+- `parseChord` distingue inversão (`E7/G#`) de extensão após barra (`E7+/9`) e
+  preserva a grafia original do acorde;
+- o parser ignora parênteses isolados como agrupamento e reconhece rótulos de
+  seção seguidos de dois-pontos (`Intro:`, `introdução:`);
+- o aviso de token ambíguo só considera acordes com acidente, extensão ou baixo
+  em linhas mistas; raízes simples como `Em` são tratadas como palavra.
+
+Resultado no documento real: **35 → 1 aviso**. `Praia Dos Golfinhos` passou a
+zero avisos; resta apenas uma linha de acorde com anotação livre entre
+parênteses, que continua sinalizada para revisão.
+
 ### 5.3. Revisão em lote
 
 - o resumo agora informa **“25 músicas reconhecidas”** em vez de “blocos
@@ -159,7 +183,7 @@ Resultado: **3 blocos**, todos com metadados errados.
 | Separadores dentro do conteúdo    | nenhum                |
 | Caracteres invisíveis no conteúdo | nenhum                |
 | Blocos marcados para revisão      | 10 de 25              |
-| Advertências de classificação     | 78 → 35               |
+| Advertências de classificação     | 78 → 1                |
 
 Exemplos conferidos:
 
@@ -210,6 +234,8 @@ Arquivo novo: `src/import/batch.regression.test.ts`.
 | Títulos contendo nomes de acordes (`Em Paz`, `A Cor do Mar`) | sim       |
 | Intro entre parênteses e falsa divisão por `(refrão)`        | sim       |
 | Progressões entre parênteses sem virarem título              | sim       |
+| Acorde com extensão após barra (`E7+/9`)                     | sim       |
+| Rótulos `Intro:`/`introdução:` e `Em` como palavra           | sim       |
 | Conteúdo musical extenso (60 versos)                         | sim       |
 | Bloco concatenado com dois tons ou dois títulos              | sim       |
 | Parser individual em todos os blocos gerados                 | sim       |
@@ -229,8 +255,8 @@ Também foram adicionados testes no parser individual para:
 | Comando                                                                       | Resultado                        |
 | ----------------------------------------------------------------------------- | -------------------------------- |
 | `npx vitest run src/import/batch.test.ts src/import/batch.regression.test.ts` | 20 testes passaram               |
-| `npx vitest run src/features/parser/parser.test.ts`                           | 18 testes passaram               |
-| `npm test`                                                                    | 46 arquivos, 245 testes passaram |
+| `npx vitest run src/features/parser/parser.test.ts`                           | 21 testes passaram               |
+| `npm test`                                                                    | 46 arquivos, 249 testes passaram |
 | `npm run typecheck`                                                           | passou                           |
 | `npm run lint`                                                                | passou                           |
 | `npm run format:check`                                                        | passou                           |
@@ -249,9 +275,9 @@ em 390 px.
   lote; a extração de PDF já remove cabeçalhos/rodapés repetidos antes da
   segmentação.
 - O DOCX não expõe páginas físicas; todos os blocos do DOCX ficam como página 1.
-- As 35 advertências restantes no documento real são majoritariamente
-  progressões entre parênteses, como `( Bb7M  Eb7M )`, que o parser individual
-  preserva como conteúdo mas não classifica como linha de cifra.
+- Resta 1 advertência no documento real: uma linha de acorde com anotação livre
+  entre parênteses (`A7+ D7+ (Até aqui...`). Ela continua sinalizada para
+  revisão em vez de ser classificada automaticamente.
 - A conferência visual foi feita em Chromium, sem aparelho físico.
 - Nenhum commit ou push foi realizado.
 

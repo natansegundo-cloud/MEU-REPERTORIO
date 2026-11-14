@@ -117,7 +117,7 @@ function chordLineCandidates(line: string): ChordCandidate[] | null {
   const candidates: ChordCandidate[] = [];
   for (const match of matches) {
     const token = match[0] ?? '';
-    if (isRhythmToken(token)) continue;
+    if (isRhythmToken(token) || /^[()]$/u.test(token)) continue;
 
     const start = match.index ?? 0;
     const candidate = candidateFromToken(token, start, start + token.length, false);
@@ -128,24 +128,38 @@ function chordLineCandidates(line: string): ChordCandidate[] | null {
   return candidates.length > 0 ? candidates : null;
 }
 
-function isBareRoot(candidate: ChordCandidate): boolean {
+/**
+ * Em letras em português, palavras como "Em" coincidem com o acorde de Mi menor.
+ * Como esse caminho só é alcançado por linhas mistas, uma raiz simples (maior
+ * ou menor, sem acidente, extensão ou baixo) é mais provavelmente palavra.
+ */
+function isSimpleChordWord(candidate: ChordCandidate): boolean {
   const parsed = parseChordCandidate(candidate.rawSymbol);
   return Boolean(
-    parsed && parsed.root.accidental === null && parsed.suffix === '' && parsed.bass === null,
+    parsed &&
+    parsed.root.accidental === null &&
+    parsed.bass === null &&
+    (parsed.suffix === '' || parsed.suffix === 'm'),
   );
 }
+
+const SECTION_LABEL_WORDS =
+  /^(?:intro|introdu[cç][aã]o|refr[aã]o|verse|verso|ponte|bridge|solo|instrumental|interl[uú]dio|final|outro|coda|riff|primeira parte|segunda parte|terceira parte)(?:\s.*)?$/iu;
 
 function prefixedChordLine(line: string): {
   label: string;
   chordText: string;
   candidates: ChordCandidate[];
 } | null {
-  const match = /^(?:\s*)\[([^\]\r\n]+)\](.*)$/u.exec(line);
+  const bracket = /^(?:\s*)\[([^\]\r\n]+)\](.*)$/u.exec(line);
+  const colon = bracket ? null : /^(?:\s*)([^:\r\n]{1,40}):\s*(.*)$/u.exec(line);
+  const match = bracket ?? colon;
   if (!match) return null;
 
   const label = (match[1] ?? '').trim();
   const rest = match[2] ?? '';
   if (!label || parseChord(label)) return null;
+  if (!bracket && !SECTION_LABEL_WORDS.test(label)) return null;
 
   const candidates = chordLineCandidates(rest);
   if (!candidates) return null;
@@ -332,7 +346,7 @@ export function recognizeLine(line: NormalizedLine): RecognizedLine {
   const possibleChordWords = tokenCandidates(line.text, false).filter((candidate) =>
     /^[A-G]/u.test(candidate.rawSymbol),
   );
-  const diagnostics = possibleChordWords.some((candidate) => !isBareRoot(candidate))
+  const diagnostics = possibleChordWords.some((candidate) => !isSimpleChordWord(candidate))
     ? [
         diagnostic(
           'warning',
