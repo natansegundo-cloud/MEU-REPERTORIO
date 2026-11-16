@@ -25,9 +25,11 @@ async function createShow(page: Page) {
   await page.getByLabel('Novo repertório').fill('Show de teste');
   await page.getByRole('button', { name: /Criar repertório/ }).click();
   await page.getByTestId('repertory-card').getByRole('button').first().click();
-  await page.getByRole('checkbox').nth(0).check();
-  await page.getByRole('checkbox').nth(1).check();
-  await page.getByRole('button', { name: /Adicionar \(2\)/ }).click();
+  await page.getByRole('button', { name: 'Adicionar músicas' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Adicionar músicas' });
+  await dialog.getByRole('checkbox').nth(0).check();
+  await dialog.getByRole('checkbox').nth(1).check();
+  await dialog.getByRole('button', { name: /Adicionar \(2\)/ }).click();
   await expect(page.getByTestId('repertory-item')).toHaveCount(2);
 }
 

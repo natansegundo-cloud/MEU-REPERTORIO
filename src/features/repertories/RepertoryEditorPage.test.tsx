@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -102,6 +102,24 @@ beforeEach(() => {
 });
 
 describe('RepertoryEditorPage', () => {
+  it('mantém a lista da biblioteca fora da tela até pedir para adicionar', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    renderEditor();
+
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar músicas' }));
+
+    expect(screen.getByRole('dialog', { name: 'Adicionar músicas' })).toBeInTheDocument();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+  });
+
   it('impede adicionar as mesmas músicas duas vezes enquanto a gravação está pendente', async () => {
     const user = userEvent.setup();
     let finishAdd: (() => void) | undefined;
@@ -119,8 +137,10 @@ describe('RepertoryEditorPage', () => {
     );
     renderEditor();
 
-    await user.click(screen.getByRole('checkbox', { name: /Primeira/ }));
-    const add = screen.getByRole('button', { name: /Adicionar/ });
+    await user.click(screen.getByRole('button', { name: 'Adicionar músicas' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar músicas' });
+    await user.click(within(dialog).getByRole('checkbox', { name: /Primeira/ }));
+    const add = within(dialog).getByRole('button', { name: /Adicionar/ });
     await user.click(add);
     expect(add).toBeDisabled();
     await user.click(add);
@@ -162,7 +182,8 @@ describe('RepertoryEditorPage', () => {
     await waitFor(() => expect(down).toBeEnabled());
   });
 
-  it('identifica o campo de tom próprio pela música correspondente', () => {
+  it('identifica o campo de tom próprio pela música correspondente', async () => {
+    const user = userEvent.setup();
     vi.mocked(useRepertoryDetail).mockReturnValue({
       data: detailWith([{ song: songA, position: 1000 }]),
       loading: false,
@@ -170,6 +191,8 @@ describe('RepertoryEditorPage', () => {
       refresh: vi.fn(),
     });
     renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Editar tom próprio de Primeira' }));
 
     expect(screen.getByRole('textbox', { name: 'Tom próprio de Primeira' })).toBeInTheDocument();
   });

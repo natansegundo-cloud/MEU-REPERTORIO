@@ -144,6 +144,8 @@ describe('library integration', () => {
     );
     expect(await screen.findByRole('heading', { name: 'Ensaio' })).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'Adicionar músicas' }));
+
     const checkboxes = screen.getAllByRole('checkbox');
     expect(checkboxes).toHaveLength(2);
     await user.click(checkboxes[0]!);

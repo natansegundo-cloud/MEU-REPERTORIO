@@ -20,9 +20,12 @@ test('cria, adiciona, reordena e mantém um repertório após recarregar', async
   await page.getByRole('button', { name: 'Criar repertório' }).click();
   await page.getByTestId('repertory-card').getByRole('button').first().click();
 
-  await page.getByRole('checkbox').nth(0).check();
-  await page.getByRole('checkbox').nth(1).check();
-  await page.getByRole('button', { name: 'Adicionar (2)' }).click();
+  await page.getByRole('button', { name: 'Adicionar músicas' }).click();
+  const addDialog = page.getByRole('dialog', { name: 'Adicionar músicas' });
+  await addDialog.getByRole('checkbox').nth(0).check();
+  await addDialog.getByRole('checkbox').nth(1).check();
+  await addDialog.getByRole('button', { name: 'Adicionar (2)' }).click();
+  await expect(addDialog).toBeHidden();
   await expect(page.getByTestId('repertory-item')).toHaveCount(2);
 
   await page
@@ -31,8 +34,10 @@ test('cria, adiciona, reordena e mantém um repertório após recarregar', async
     .getByRole('button', { name: 'Descer Canção A' })
     .click();
   await expect(page.getByTestId('repertory-item').nth(0)).toContainText('Canção B');
-  await page.getByTestId('repertory-item').nth(0).getByLabel('Tom próprio').fill('E');
-  await page.getByTestId('repertory-item').nth(0).getByLabel('Tom próprio').press('Tab');
+  const firstItem = page.getByTestId('repertory-item').nth(0);
+  await firstItem.getByRole('button', { name: /Editar tom próprio de/ }).click();
+  await firstItem.getByLabel(/Tom próprio de/).fill('E');
+  await firstItem.getByLabel(/Tom próprio de/).press('Tab');
   await expect(page.getByText('Tom próprio atualizado.')).toBeVisible();
 
   await page.reload();
@@ -61,9 +66,11 @@ test('reordena itens por gesto de toque no editor', async ({ page }) => {
   await page.getByLabel('Novo repertório').fill('Ordem por toque');
   await page.getByRole('button', { name: 'Criar repertório' }).click();
   await page.getByTestId('repertory-card').getByRole('button').first().click();
-  await page.getByRole('checkbox').nth(0).check();
-  await page.getByRole('checkbox').nth(1).check();
-  await page.getByRole('button', { name: /Adicionar \(2\)/ }).click();
+  await page.getByRole('button', { name: 'Adicionar músicas' }).click();
+  const addDialog = page.getByRole('dialog', { name: 'Adicionar músicas' });
+  await addDialog.getByRole('checkbox').nth(0).check();
+  await addDialog.getByRole('checkbox').nth(1).check();
+  await addDialog.getByRole('button', { name: /Adicionar \(2\)/ }).click();
   await expect(page.getByTestId('repertory-item')).toHaveCount(2);
 
   const items = page.getByTestId('repertory-item');

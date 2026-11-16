@@ -19,7 +19,7 @@ import {
   updateRepertoryItemKey,
 } from '@/services';
 
-import { useSongs } from '@/features/library/useSongs';
+import { AddSongsDialog } from './AddSongsDialog';
 import { useRepertoryDetail } from './useRepertories';
 import styles from './RepertoryEditorPage.module.css';
 
@@ -38,12 +38,13 @@ function isRevisionConflict(cause: unknown): boolean {
 
 export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: RepertoryEditorPageProps) {
   const { data: detail, loading, error, refresh } = useRepertoryDetail(repertoryId);
-  const [songQuery, setSongQuery] = useState('');
-  const [selectedSongIds, setSelectedSongIds] = useState<readonly string[]>([]);
-  const [addOpen, setAddOpen] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [editingToneId, setEditingToneId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const restoreNameFocusRef = useRef(false);
+  const skipToneCommitRef = useRef(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [pointerDraggingId, setPointerDraggingId] = useState<string | null>(null);
   const [pointerTargetIndex, setPointerTargetIndex] = useState<number | null>(null);
@@ -52,7 +53,6 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
   const [revisionConflict, setRevisionConflict] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const pendingActionRef = useRef(false);
-  const { data: songs, loading: songsLoading } = useSongs(songQuery);
   const pointerDragRef = useRef<{
     itemId: string;
     pointerId: number;
@@ -102,16 +102,29 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
     }
   }
 
-  async function handleAddSongs(): Promise<void> {
-    if (!detail || selectedSongIds.length === 0 || !startAction('add')) return;
+  function openAddDialog(): void {
     clearMessages();
+    setAddError(null);
+    setAddOpen(true);
+  }
+
+  function closeAddDialog(): void {
+    setAddOpen(false);
+    setAddError(null);
+  }
+
+  async function handleAddSongs(songIds: readonly string[]): Promise<void> {
+    if (!detail || songIds.length === 0 || !startAction('add')) return;
+    clearMessages();
+    setAddError(null);
     try {
-      await addSongsToRepertory(detail.repertory.id, selectedSongIds, detail.repertory.revision);
-      setSelectedSongIds([]);
-      setAddOpen(false);
+      await addSongsToRepertory(detail.repertory.id, songIds, detail.repertory.revision);
+      closeAddDialog();
       setFeedback('Músicas adicionadas ao repertório.');
     } catch (cause: unknown) {
-      setErrorMessage(describeActionError(cause, 'Não foi possível adicionar as músicas.'));
+      const message = describeActionError(cause, 'Não foi possível adicionar as músicas.');
+      setErrorMessage(message);
+      setAddError(message);
     } finally {
       finishAction();
     }
@@ -228,6 +241,12 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
     };
   }, [pointerDraggingId, resetPointerDrag]);
 
+  useEffect(() => {
+    if (!feedback) return undefined;
+    const timeoutId = window.setTimeout(() => setFeedback(null), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [feedback]);
+
   if (loading) return <p className={styles.feedback}>Abrindo repertório…</p>;
   if (error) return <p className={styles.error}>Não foi possível abrir este repertório.</p>;
   if (!detail) {
@@ -242,7 +261,6 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
   }
 
   const existingSongIds = new Set(detail.items.map((entry) => entry.item.songId));
-
   return (
     <div className={styles.page}>
       <button className={styles.back} type="button" onClick={onBack}>
@@ -317,72 +335,6 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
         </Button>
       </header>
 
-      <details
-        className={styles.addPanel}
-        open={addOpen}
-        onToggle={(event) => setAddOpen(event.currentTarget.open)}
-      >
-        <summary className={styles.addSummary}>
-          <span>Adicionar músicas</span>
-          {selectedSongIds.length > 0 ? (
-            <small>
-              {selectedSongIds.length}{' '}
-              {selectedSongIds.length === 1 ? 'selecionada' : 'selecionadas'}
-            </small>
-          ) : null}
-        </summary>
-        <div className={styles.addBody}>
-          <div className={styles.addToolbar}>
-            <label className={styles.search}>
-              <span className={styles.srOnly}>Pesquisar músicas para adicionar</span>
-              <input
-                value={songQuery}
-                onChange={(event) => setSongQuery(event.target.value)}
-                placeholder="Pesquisar por título, artista ou tom"
-              />
-            </label>
-            <Button
-              onClick={() => void handleAddSongs()}
-              disabled={selectedSongIds.length === 0 || pendingAction !== null}
-            >
-              <Plus size={16} /> {pendingAction === 'add' ? 'Adicionando…' : 'Adicionar'}{' '}
-              {selectedSongIds.length > 0 ? `(${selectedSongIds.length})` : ''}
-            </Button>
-          </div>
-          <div className={styles.songPicker}>
-            {songsLoading ? <p className={styles.muted}>Carregando músicas…</p> : null}
-            {!songsLoading && songs.filter((song) => !existingSongIds.has(song.id)).length === 0 ? (
-              <p className={styles.muted}>Nenhuma música disponível para adicionar.</p>
-            ) : null}
-            {songs
-              .filter((song) => !existingSongIds.has(song.id))
-              .map((song) => {
-                const checked = selectedSongIds.includes(song.id);
-                return (
-                  <label className={styles.songOption} key={song.id}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() =>
-                        setSelectedSongIds((current) =>
-                          checked ? current.filter((id) => id !== song.id) : [...current, song.id],
-                        )
-                      }
-                    />
-                    <span>
-                      <strong>{song.title}</strong>
-                      <small>
-                        {song.artist ?? 'Artista não informado'} ·{' '}
-                        {song.originalKey ?? 'Tom não informado'}
-                      </small>
-                    </span>
-                  </label>
-                );
-              })}
-          </div>
-        </div>
-      </details>
-
       {feedback ? (
         <p className={styles.success} role="status">
           {feedback}
@@ -408,11 +360,26 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
 
       <section className={styles.orderPanel} aria-labelledby="order-heading">
         <div className={styles.sectionHeading}>
-          <h2 id="order-heading">Ordem do repertório</h2>
-          <span className={styles.orderHint}>Arraste para reordenar</span>
+          <div className={styles.sectionTitle}>
+            <h2 id="order-heading">Músicas do repertório</h2>
+            <span className={styles.orderHint}>Arraste pelo ícone para reordenar</span>
+          </div>
+          <Button
+            className={styles.addButton}
+            size="sm"
+            variant="secondary"
+            aria-label="Adicionar músicas"
+            onClick={openAddDialog}
+          >
+            <Plus size={16} aria-hidden="true" />
+            <span className={styles.addLabel}>Adicionar</span>
+          </Button>
         </div>
         {detail.items.length === 0 ? (
-          <p className={styles.emptyOrder}>Adicione músicas acima para montar a ordem.</p>
+          <div className={styles.emptyOrder}>
+            <p>Nenhuma música neste repertório ainda.</p>
+            <span>Use “Adicionar” para escolher músicas da biblioteca.</span>
+          </div>
         ) : null}
         <ol
           className={styles.itemList}
@@ -423,7 +390,7 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
           {detail.items.map((entry, index) => {
             const song = entry.song;
             const title = song?.title ?? 'Música removida';
-            const artist = song?.artist ?? 'O arquivo original não está mais na biblioteca.';
+            const artist = song?.artist ?? null;
             const displayedKey = entry.item.preferredKey ?? song?.preferredKey ?? song?.originalKey;
             return (
               <li
@@ -432,6 +399,7 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
                 }`}
                 data-testid="repertory-item"
                 data-repertory-index={index}
+                data-editing={editingToneId === entry.item.id || undefined}
                 draggable
                 key={entry.item.id}
                 onDragStart={() => setDraggingId(entry.item.id)}
@@ -468,24 +436,31 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
                 </span>
                 <span className={styles.itemInfo}>
                   <strong>{title}</strong>
-                  <small>{artist}</small>
-                  <span className={song ? styles.itemKey : styles.removedLabel}>
-                    {song
-                      ? `Tom: ${displayedKey ?? 'não informado'}`
-                      : 'Música removida · item preservado'}
+                  <span className={styles.itemMeta}>
+                    {song ? (
+                      <>
+                        {artist ? <small>{artist}</small> : null}
+                        <button
+                          type="button"
+                          className={styles.toneChip}
+                          data-custom={entry.item.preferredKey ? 'true' : undefined}
+                          aria-label={`Editar tom próprio de ${title}`}
+                          onClick={() => {
+                            clearMessages();
+                            skipToneCommitRef.current = false;
+                            setEditingToneId(entry.item.id);
+                          }}
+                        >
+                          Tom: {displayedKey ?? '—'}
+                        </button>
+                      </>
+                    ) : (
+                      <small className={styles.removedLabel}>
+                        O arquivo original não está mais na biblioteca.
+                      </small>
+                    )}
                   </span>
                 </span>
-                <label className={styles.itemTone}>
-                  <span>Tom próprio</span>
-                  <input
-                    key={`${entry.item.id}-${entry.item.preferredKey ?? ''}`}
-                    aria-label={`Tom próprio de ${title}`}
-                    defaultValue={entry.item.preferredKey ?? ''}
-                    placeholder={song?.originalKey ?? 'Tom'}
-                    disabled={!song}
-                    onBlur={(event) => void handleItemKey(entry.item.id, event.target.value)}
-                  />
-                </label>
                 <div className={styles.itemActions}>
                   <button
                     type="button"
@@ -512,11 +487,55 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
                     <span className={styles.srOnly}>Remover {title}</span>
                   </button>
                 </div>
+                {editingToneId === entry.item.id ? (
+                  <div className={styles.toneEditor}>
+                    <label>
+                      <span>Tom próprio</span>
+                      <input
+                        key={`${entry.item.id}-${entry.item.preferredKey ?? ''}`}
+                        aria-label={`Tom próprio de ${title}`}
+                        defaultValue={entry.item.preferredKey ?? ''}
+                        placeholder={song?.originalKey ?? 'Tom'}
+                        autoFocus
+                        onBlur={(event) => {
+                          if (skipToneCommitRef.current) {
+                            skipToneCommitRef.current = false;
+                            return;
+                          }
+                          setEditingToneId(null);
+                          void handleItemKey(entry.item.id, event.target.value);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            event.currentTarget.blur();
+                          }
+                          if (event.key === 'Escape') {
+                            event.preventDefault();
+                            skipToneCommitRef.current = true;
+                            setEditingToneId(null);
+                          }
+                        }}
+                      />
+                    </label>
+                    <span className={styles.toneHint}>Vazio usa o tom da música</span>
+                  </div>
+                ) : null}
               </li>
             );
           })}
         </ol>
       </section>
+
+      {addOpen ? (
+        <AddSongsDialog
+          existingSongIds={existingSongIds}
+          adding={pendingAction === 'add'}
+          error={addError}
+          onClose={closeAddDialog}
+          onAdd={(songIds) => void handleAddSongs(songIds)}
+        />
+      ) : null}
     </div>
   );
 }
