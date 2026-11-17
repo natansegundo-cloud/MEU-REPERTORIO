@@ -27,15 +27,18 @@ export function AddSongsDialog({
 }: AddSongsDialogProps) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<readonly string[]>([]);
-  const { data: songs, loading } = useSongs(query);
+  const { data: songs, loading, error: loadError } = useSongs(query);
   const titleId = useId();
+  const descriptionId = `${titleId}-description`;
   const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const onCloseRef = useRef(onClose);
+  const addingRef = useRef(adding);
 
   useEffect(() => {
     onCloseRef.current = onClose;
-  }, [onClose]);
+    addingRef.current = adding;
+  }, [onClose, adding]);
 
   useEffect(() => {
     const releaseScrollLock = lockBodyScroll();
@@ -46,6 +49,7 @@ export function AddSongsDialog({
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Escape') {
         event.preventDefault();
+        if (addingRef.current) return;
         onCloseRef.current();
         return;
       }
@@ -56,10 +60,16 @@ export function AddSongsDialog({
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) {
+      const active = document.activeElement;
+      if (!panelRef.current.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+        return;
+      }
+      if (event.shiftKey && active === first) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && active === last) {
         event.preventDefault();
         first.focus();
       }
@@ -69,9 +79,15 @@ export function AddSongsDialog({
     return () => {
       releaseScrollLock();
       document.removeEventListener('keydown', handleKeyDown);
-      previousFocus?.focus();
+      if (previousFocus?.isConnected) previousFocus.focus();
     };
   }, []);
+
+  useEffect(() => {
+    // Desabilitar o checkbox focado faria o navegador perder o foco para o body.
+    // Levar o foco ao próprio diálogo mantém o contexto e anuncia o estado ocupado.
+    if (adding) panelRef.current?.focus();
+  }, [adding]);
 
   const available = songs.filter((song) => !existingSongIds.has(song.id));
 
@@ -85,24 +101,35 @@ export function AddSongsDialog({
     <div
       className={styles.overlay}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget && !adding) onClose();
       }}
     >
       <div
         className={styles.panel}
         role="dialog"
         aria-modal="true"
+        aria-busy={adding || undefined}
+        aria-describedby={descriptionId}
         aria-labelledby={titleId}
         ref={panelRef}
+        tabIndex={-1}
       >
         <header className={styles.header}>
           <div className={styles.heading}>
             <h2 className={styles.title} id={titleId}>
               Adicionar músicas
             </h2>
-            <p className={styles.subtitle}>Escolha uma ou mais músicas da biblioteca.</p>
+            <p className={styles.subtitle} id={descriptionId}>
+              Escolha uma ou mais músicas da biblioteca.
+            </p>
           </div>
-          <button className={styles.close} type="button" aria-label="Fechar" onClick={onClose}>
+          <button
+            className={styles.close}
+            type="button"
+            aria-label="Fechar"
+            disabled={adding}
+            onClick={onClose}
+          >
             <X size={18} aria-hidden="true" />
           </button>
         </header>
@@ -120,35 +147,51 @@ export function AddSongsDialog({
 
         <div className={styles.list} role="group" aria-label="Músicas disponíveis">
           {loading ? <p className={styles.empty}>Carregando músicas…</p> : null}
-          {!loading && songs.length === 0 ? (
+          {!loading && loadError ? (
+            <p className={styles.empty} role="alert">
+              Não foi possível carregar as músicas da biblioteca.
+            </p>
+          ) : null}
+          {!loading && !loadError && songs.length === 0 ? (
             <p className={styles.empty}>
               {query
                 ? 'Nenhuma música encontrada para esta busca.'
                 : 'Sua biblioteca ainda está vazia. Importe músicas para montar repertórios.'}
             </p>
           ) : null}
-          {!loading && songs.length > 0 && available.length === 0 ? (
+          {!loading && !loadError && songs.length > 0 && available.length === 0 ? (
             <p className={styles.empty}>
               {query
                 ? 'Nenhuma música disponível para esta busca.'
                 : 'Todas as músicas da biblioteca já estão neste repertório.'}
             </p>
           ) : null}
-          {available.map((song) => {
-            const checked = selected.includes(song.id);
-            return (
-              <label className={styles.option} key={song.id} data-checked={checked || undefined}>
-                <input type="checkbox" checked={checked} onChange={() => toggle(song.id)} />
-                <span className={styles.optionText}>
-                  <strong>{song.title}</strong>
-                  <small>
-                    {song.artist ?? 'Artista não informado'} ·{' '}
-                    {song.originalKey ?? 'Tom não informado'}
-                  </small>
-                </span>
-              </label>
-            );
-          })}
+          {!loadError &&
+            available.map((song) => {
+              const checked = selected.includes(song.id);
+              return (
+                <label
+                  className={styles.option}
+                  key={song.id}
+                  data-checked={checked || undefined}
+                  data-busy={adding || undefined}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={adding}
+                    onChange={() => toggle(song.id)}
+                  />
+                  <span className={styles.optionText}>
+                    <strong>{song.title}</strong>
+                    <small>
+                      {song.artist ?? 'Artista não informado'} ·{' '}
+                      {song.originalKey ?? 'Tom não informado'}
+                    </small>
+                  </span>
+                </label>
+              );
+            })}
         </div>
 
         {error ? (

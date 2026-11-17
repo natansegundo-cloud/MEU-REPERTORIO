@@ -59,9 +59,16 @@
   cursor: pointer;
 }
 
-.close:hover {
-  background: var(--color-surface-interactive);
-  color: var(--color-text);
+.close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .close:hover:not(:disabled) {
+    background: var(--color-surface-interactive);
+    color: var(--color-text);
+  }
 }
 
 .search {
@@ -126,12 +133,22 @@
   border-bottom: 0;
 }
 
-.option:hover {
-  background: var(--color-surface-interactive);
+@media (hover: hover) {
+  .option:hover {
+    background: var(--color-surface-interactive);
+  }
 }
 
 .option[data-checked='true'] {
   background: var(--color-accent-soft);
+}
+
+.option[data-busy='true'] {
+  cursor: default;
+}
+
+.option[data-busy='true'] input {
+  cursor: not-allowed;
 }
 
 .option input {

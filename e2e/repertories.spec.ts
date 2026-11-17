@@ -85,3 +85,27 @@ test('reordena itens por gesto de toque no editor', async ({ page }) => {
   });
   await expect(items.nth(0)).toContainText('Toque B');
 });
+
+test('reordena itens arrastando o ícone com o mouse', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Arrasto HTML5 com mouse é validado no projeto desktop.');
+
+  await page.goto('/');
+  await importSong(page, 'Mouse A', 'Tom: C\nC\nLetra A');
+  await importSong(page, 'Mouse B', 'Tom: D\nD\nLetra B');
+
+  await navigateTo(page, 'Repertórios');
+  await page.getByLabel('Novo repertório').fill('Ordem por mouse');
+  await page.getByRole('button', { name: 'Criar repertório' }).click();
+  await page.getByTestId('repertory-card').getByRole('button').first().click();
+  await page.getByRole('button', { name: 'Adicionar músicas' }).click();
+  const addDialog = page.getByRole('dialog', { name: 'Adicionar músicas' });
+  await addDialog.getByRole('checkbox').nth(0).check();
+  await addDialog.getByRole('checkbox').nth(1).check();
+  await addDialog.getByRole('button', { name: /Adicionar \(2\)/ }).click();
+  await expect(page.getByTestId('repertory-item')).toHaveCount(2);
+
+  const items = page.getByTestId('repertory-item');
+  await items.nth(0).getByRole('button', { name: 'Arrastar Mouse A' }).dragTo(items.nth(1));
+
+  await expect(items.nth(0)).toContainText('Mouse B');
+});

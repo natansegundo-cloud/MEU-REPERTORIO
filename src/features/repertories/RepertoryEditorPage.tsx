@@ -1,14 +1,5 @@
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowUp,
-  GripVertical,
-  Play,
-  Plus,
-  Save,
-  Trash2,
-} from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
+import { ArrowLeft, Play, Save } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import {
@@ -20,6 +11,7 @@ import {
 } from '@/services';
 
 import { AddSongsDialog } from './AddSongsDialog';
+import { RepertoryOrderPanel } from './RepertoryOrderPanel';
 import { useRepertoryDetail } from './useRepertories';
 import styles from './RepertoryEditorPage.module.css';
 
@@ -27,6 +19,11 @@ interface RepertoryEditorPageProps {
   readonly repertoryId: string;
   readonly onBack: () => void;
   readonly onOpenShow: (itemId?: string) => void;
+}
+
+interface EditorNotice {
+  readonly message: string;
+  readonly conflict: boolean;
 }
 
 const REVISION_CONFLICT_MESSAGE =
@@ -40,39 +37,26 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
   const { data: detail, loading, error, refresh } = useRepertoryDetail(repertoryId);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
-  const [editingToneId, setEditingToneId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const restoreNameFocusRef = useRef(false);
-  const skipToneCommitRef = useRef(false);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [pointerDraggingId, setPointerDraggingId] = useState<string | null>(null);
-  const [pointerTargetIndex, setPointerTargetIndex] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [revisionConflict, setRevisionConflict] = useState(false);
+  const [notice, setNotice] = useState<EditorNotice | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const pendingActionRef = useRef(false);
-  const pointerDragRef = useRef<{
-    itemId: string;
-    pointerId: number;
-    targetIndex: number | null;
-  } | null>(null);
-  const finishPointerDragRef = useRef<() => void>(() => undefined);
 
   function clearMessages(): void {
     setFeedback(null);
-    setErrorMessage(null);
-    setRevisionConflict(false);
+    setNotice(null);
   }
 
-  function describeActionError(cause: unknown, fallback: string): string {
-    if (isRevisionConflict(cause)) {
-      setRevisionConflict(true);
-      return REVISION_CONFLICT_MESSAGE;
-    }
-    setRevisionConflict(false);
-    return cause instanceof Error ? cause.message : fallback;
+  function describeActionError(cause: unknown, fallback: string): EditorNotice {
+    return isRevisionConflict(cause)
+      ? { message: REVISION_CONFLICT_MESSAGE, conflict: true }
+      : {
+          message: cause instanceof Error ? cause.message : fallback,
+          conflict: false,
+        };
   }
 
   function startAction(action: string): boolean {
@@ -88,15 +72,23 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
   }
 
   async function handleRename(): Promise<void> {
-    if (!detail || !startAction('rename')) return;
+    if (!detail) return;
+    const name = nameDraft.trim();
+    if (name === detail.repertory.name) {
+      restoreNameFocusRef.current = true;
+      setEditingName(false);
+      return;
+    }
+    if (!startAction('rename')) return;
+
     clearMessages();
     try {
-      await renameRepertory(detail.repertory.id, nameDraft, detail.repertory.revision);
+      await renameRepertory(detail.repertory.id, name, detail.repertory.revision);
       restoreNameFocusRef.current = true;
       setEditingName(false);
       setFeedback('Nome do repertório atualizado.');
     } catch (cause: unknown) {
-      setErrorMessage(describeActionError(cause, 'Não foi possível renomear o repertório.'));
+      setNotice(describeActionError(cause, 'Não foi possível renomear o repertório.'));
     } finally {
       finishAction();
     }
@@ -122,9 +114,15 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
       closeAddDialog();
       setFeedback('Músicas adicionadas ao repertório.');
     } catch (cause: unknown) {
-      const message = describeActionError(cause, 'Não foi possível adicionar as músicas.');
-      setErrorMessage(message);
-      setAddError(message);
+      const actionError = describeActionError(cause, 'Não foi possível adicionar as músicas.');
+      if (actionError.conflict) {
+        // O conflito precisa ser resolvido na página; o diálogo sairia da frente do alerta.
+        closeAddDialog();
+        setNotice(actionError);
+      } else {
+        // Erros comuns pertencem ao diálogo e não devem ser anunciados duas vezes.
+        setAddError(actionError.message);
+      }
     } finally {
       finishAction();
     }
@@ -141,7 +139,7 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
         detail.repertory.revision,
       );
     } catch (cause: unknown) {
-      setErrorMessage(describeActionError(cause, 'Não foi possível reordenar o repertório.'));
+      setNotice(describeActionError(cause, 'Não foi possível reordenar o repertório.'));
     } finally {
       finishAction();
     }
@@ -158,88 +156,23 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
       await removeRepertoryItem(itemId);
       setFeedback('Música removida do repertório.');
     } catch (cause: unknown) {
-      setErrorMessage(describeActionError(cause, 'Não foi possível remover a música.'));
+      setNotice(describeActionError(cause, 'Não foi possível remover a música.'));
     } finally {
       finishAction();
     }
   }
 
-  async function handleItemKey(itemId: string, value: string): Promise<void> {
+  async function handleItemKey(itemId: string, value: string): Promise<boolean> {
     clearMessages();
     try {
       await updateRepertoryItemKey(itemId, value);
       setFeedback('Tom próprio atualizado.');
+      return true;
     } catch (cause: unknown) {
-      setErrorMessage(describeActionError(cause, 'Não foi possível salvar o tom próprio.'));
+      setNotice(describeActionError(cause, 'Não foi possível salvar o tom próprio.'));
+      return false;
     }
   }
-
-  const resetPointerDrag = useCallback((): void => {
-    pointerDragRef.current = null;
-    setDraggingId(null);
-    setPointerDraggingId(null);
-    setPointerTargetIndex(null);
-  }, []);
-
-  function handlePointerDown(event: PointerEvent<HTMLSpanElement>, itemId: string): void {
-    if (pendingActionRef.current) return;
-    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
-    if (pointerDragRef.current) return;
-    // O handle tem touch-action: none apenas nele; o restante da lista continua rolando.
-    pointerDragRef.current = { itemId, pointerId: event.pointerId, targetIndex: null };
-    setDraggingId(itemId);
-    setPointerDraggingId(itemId);
-    setPointerTargetIndex(null);
-  }
-
-  function handlePointerMove(event: PointerEvent<HTMLOListElement>): void {
-    const drag = pointerDragRef.current;
-    if (!drag || event.pointerId !== drag.pointerId) return;
-    const targetElement =
-      (event.target instanceof Element
-        ? event.target.closest<HTMLElement>('[data-repertory-index]')
-        : null) ??
-      [...event.currentTarget.querySelectorAll<HTMLElement>('[data-repertory-index]')].find(
-        (element) => {
-          const rect = element.getBoundingClientRect();
-          return event.clientY >= rect.top && event.clientY <= rect.bottom;
-        },
-      );
-    const targetIndex = Number(targetElement?.dataset.repertoryIndex);
-    if (!Number.isInteger(targetIndex)) return;
-    drag.targetIndex = targetIndex;
-    setPointerTargetIndex(targetIndex);
-  }
-
-  function finishPointerDrag(): void {
-    const drag = pointerDragRef.current;
-    const items = detail?.items;
-    resetPointerDrag();
-    if (!drag || !items || drag.targetIndex === null) return;
-    const from = items.findIndex((entry) => entry.item.id === drag.itemId);
-    if (from < 0 || from === drag.targetIndex) return;
-    void handleMove(drag.itemId, drag.targetIndex);
-  }
-
-  useEffect(() => {
-    finishPointerDragRef.current = finishPointerDrag;
-  });
-
-  useEffect(() => {
-    if (!pointerDraggingId) return undefined;
-    function handleFinish(): void {
-      finishPointerDragRef.current();
-    }
-    function handleCancel(): void {
-      resetPointerDrag();
-    }
-    window.addEventListener('pointerup', handleFinish);
-    window.addEventListener('pointercancel', handleCancel);
-    return () => {
-      window.removeEventListener('pointerup', handleFinish);
-      window.removeEventListener('pointercancel', handleCancel);
-    };
-  }, [pointerDraggingId, resetPointerDrag]);
 
   useEffect(() => {
     if (!feedback) return undefined;
@@ -261,6 +194,7 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
   }
 
   const existingSongIds = new Set(detail.items.map((entry) => entry.item.songId));
+
   return (
     <div className={styles.page}>
       <button className={styles.back} type="button" onClick={onBack}>
@@ -273,6 +207,7 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
           {editingName ? (
             <div className={styles.titleEdit}>
               <input
+                aria-label="Nome do repertório"
                 value={nameDraft}
                 onChange={(event) => setNameDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -340,10 +275,10 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
           {feedback}
         </p>
       ) : null}
-      {errorMessage ? (
+      {notice ? (
         <div className={styles.alert} role="alert">
-          <span>{errorMessage}</span>
-          {revisionConflict ? (
+          <span>{notice.message}</span>
+          {notice.conflict ? (
             <Button
               size="sm"
               variant="secondary"
@@ -358,174 +293,15 @@ export function RepertoryEditorPage({ repertoryId, onBack, onOpenShow }: Reperto
         </div>
       ) : null}
 
-      <section className={styles.orderPanel} aria-labelledby="order-heading">
-        <div className={styles.sectionHeading}>
-          <div className={styles.sectionTitle}>
-            <h2 id="order-heading">Músicas do repertório</h2>
-            <span className={styles.orderHint}>Arraste pelo ícone para reordenar</span>
-          </div>
-          <Button
-            className={styles.addButton}
-            size="sm"
-            variant="secondary"
-            aria-label="Adicionar músicas"
-            onClick={openAddDialog}
-          >
-            <Plus size={16} aria-hidden="true" />
-            <span className={styles.addLabel}>Adicionar</span>
-          </Button>
-        </div>
-        {detail.items.length === 0 ? (
-          <div className={styles.emptyOrder}>
-            <p>Nenhuma música neste repertório ainda.</p>
-            <span>Use “Adicionar” para escolher músicas da biblioteca.</span>
-          </div>
-        ) : null}
-        <ol
-          className={styles.itemList}
-          onPointerMove={handlePointerMove}
-          onPointerUp={finishPointerDrag}
-          onPointerCancel={() => resetPointerDrag()}
-        >
-          {detail.items.map((entry, index) => {
-            const song = entry.song;
-            const title = song?.title ?? 'Música removida';
-            const artist = song?.artist ?? null;
-            const displayedKey = entry.item.preferredKey ?? song?.preferredKey ?? song?.originalKey;
-            return (
-              <li
-                className={`${styles.item} ${draggingId === entry.item.id ? styles.dragging : ''} ${
-                  pointerDraggingId && pointerTargetIndex === index ? styles.dropTarget : ''
-                }`}
-                data-testid="repertory-item"
-                data-repertory-index={index}
-                data-editing={editingToneId === entry.item.id || undefined}
-                draggable
-                key={entry.item.id}
-                onDragStart={() => setDraggingId(entry.item.id)}
-                onDragEnd={() => setDraggingId(null)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => {
-                  if (draggingId && draggingId !== entry.item.id) {
-                    const from = detail.items.findIndex((item) => item.item.id === draggingId);
-                    void handleMove(draggingId, index);
-                    setDraggingId(null);
-                    if (from < 0) setErrorMessage('Não foi possível localizar o item arrastado.');
-                  }
-                }}
-              >
-                <span className={styles.position}>{index + 1}</span>
-                <span
-                  className={styles.dragHandle}
-                  aria-label={`Arrastar ${title}`}
-                  role="button"
-                  tabIndex={0}
-                  onPointerDown={(event) => handlePointerDown(event, entry.item.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'ArrowUp') {
-                      event.preventDefault();
-                      void handleMove(entry.item.id, index - 1);
-                    }
-                    if (event.key === 'ArrowDown') {
-                      event.preventDefault();
-                      void handleMove(entry.item.id, index + 1);
-                    }
-                  }}
-                >
-                  <GripVertical size={18} />
-                </span>
-                <span className={styles.itemInfo}>
-                  <strong>{title}</strong>
-                  <span className={styles.itemMeta}>
-                    {song ? (
-                      <>
-                        {artist ? <small>{artist}</small> : null}
-                        <button
-                          type="button"
-                          className={styles.toneChip}
-                          data-custom={entry.item.preferredKey ? 'true' : undefined}
-                          aria-label={`Editar tom próprio de ${title}`}
-                          onClick={() => {
-                            clearMessages();
-                            skipToneCommitRef.current = false;
-                            setEditingToneId(entry.item.id);
-                          }}
-                        >
-                          Tom: {displayedKey ?? '—'}
-                        </button>
-                      </>
-                    ) : (
-                      <small className={styles.removedLabel}>
-                        O arquivo original não está mais na biblioteca.
-                      </small>
-                    )}
-                  </span>
-                </span>
-                <div className={styles.itemActions}>
-                  <button
-                    type="button"
-                    disabled={pendingAction !== null || index === 0}
-                    onClick={() => void handleMove(entry.item.id, index - 1)}
-                  >
-                    <ArrowUp size={16} />
-                    <span className={styles.srOnly}>Subir {title}</span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pendingAction !== null || index === detail.items.length - 1}
-                    onClick={() => void handleMove(entry.item.id, index + 1)}
-                  >
-                    <ArrowDown size={16} />
-                    <span className={styles.srOnly}>Descer {title}</span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pendingAction !== null}
-                    onClick={() => void handleRemove(entry.item.id)}
-                  >
-                    <Trash2 size={16} />
-                    <span className={styles.srOnly}>Remover {title}</span>
-                  </button>
-                </div>
-                {editingToneId === entry.item.id ? (
-                  <div className={styles.toneEditor}>
-                    <label>
-                      <span>Tom próprio</span>
-                      <input
-                        key={`${entry.item.id}-${entry.item.preferredKey ?? ''}`}
-                        aria-label={`Tom próprio de ${title}`}
-                        defaultValue={entry.item.preferredKey ?? ''}
-                        placeholder={song?.originalKey ?? 'Tom'}
-                        autoFocus
-                        onBlur={(event) => {
-                          if (skipToneCommitRef.current) {
-                            skipToneCommitRef.current = false;
-                            return;
-                          }
-                          setEditingToneId(null);
-                          void handleItemKey(entry.item.id, event.target.value);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.preventDefault();
-                            event.currentTarget.blur();
-                          }
-                          if (event.key === 'Escape') {
-                            event.preventDefault();
-                            skipToneCommitRef.current = true;
-                            setEditingToneId(null);
-                          }
-                        }}
-                      />
-                    </label>
-                    <span className={styles.toneHint}>Vazio usa o tom da música</span>
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+      <RepertoryOrderPanel
+        items={detail.items}
+        busy={pendingAction !== null}
+        onAdd={openAddDialog}
+        onClearMessages={clearMessages}
+        onMove={handleMove}
+        onRemove={handleRemove}
+        onSaveTone={handleItemKey}
+      />
 
       {addOpen ? (
         <AddSongsDialog

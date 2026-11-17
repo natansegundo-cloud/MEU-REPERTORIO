@@ -17,7 +17,7 @@ vi.mock('@/services', () => ({
 vi.mock('./useRepertories', () => ({ useRepertoryDetail: vi.fn() }));
 vi.mock('@/features/library/useSongs', () => ({ useSongs: vi.fn() }));
 
-import { addSongsToRepertory, reorderRepertoryItem } from '@/services';
+import { addSongsToRepertory, reorderRepertoryItem, updateRepertoryItemKey } from '@/services';
 import { useSongs } from '@/features/library/useSongs';
 
 import { RepertoryEditorPage } from './RepertoryEditorPage';
@@ -120,6 +120,94 @@ describe('RepertoryEditorPage', () => {
     expect(screen.getAllByRole('checkbox')).toHaveLength(2);
   });
 
+  it('não oferece músicas que já estão no repertório', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([{ song: songA, position: 1000 }]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar músicas' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar músicas' });
+
+    expect(within(dialog).queryByRole('checkbox', { name: /Primeira/ })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('checkbox', { name: /Segunda/ })).toBeInTheDocument();
+  });
+
+  it('filtra as músicas do diálogo pela busca', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    vi.mocked(useSongs).mockImplementation((query) => ({
+      data: query ? [songB] : [songA, songB],
+      loading: false,
+      error: null,
+    }));
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar músicas' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar músicas' });
+    expect(within(dialog).getAllByRole('checkbox')).toHaveLength(2);
+
+    await user.type(
+      within(dialog).getByRole('textbox', { name: 'Pesquisar músicas para adicionar' }),
+      'Segunda',
+    );
+
+    expect(within(dialog).getAllByRole('checkbox')).toHaveLength(1);
+    expect(within(dialog).getByRole('checkbox', { name: /Segunda/ })).toBeInTheDocument();
+  });
+
+  it('distingue falha ao carregar a biblioteca de uma biblioteca vazia', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    vi.mocked(useSongs).mockReturnValue({
+      data: [],
+      loading: false,
+      error: new Error('Falha ao ler a biblioteca.'),
+    });
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar músicas' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar músicas' });
+
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar as músicas da biblioteca.',
+    );
+    expect(within(dialog).queryByText(/biblioteca ainda está vazia/i)).not.toBeInTheDocument();
+  });
+
+  it('devolve o foco ao botão que abriu o diálogo', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    renderEditor();
+
+    const trigger = screen.getByRole('button', { name: 'Adicionar músicas' });
+    await user.click(trigger);
+    expect(screen.getByRole('textbox', { name: 'Pesquisar músicas para adicionar' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
   it('impede adicionar as mesmas músicas duas vezes enquanto a gravação está pendente', async () => {
     const user = userEvent.setup();
     let finishAdd: (() => void) | undefined;
@@ -150,6 +238,102 @@ describe('RepertoryEditorPage', () => {
     await waitFor(() =>
       expect(screen.getByText('Músicas adicionadas ao repertório.')).toBeInTheDocument(),
     );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Adicionar músicas' })).toHaveFocus(),
+    );
+  });
+
+  it('não fecha o diálogo enquanto a gravação está pendente', async () => {
+    const user = userEvent.setup();
+    let finishAdd: (() => void) | undefined;
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    vi.mocked(addSongsToRepertory).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishAdd = () => resolve({ ...repertory, revision: 2 });
+        }),
+    );
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar músicas' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar músicas' });
+    await user.click(within(dialog).getByRole('checkbox', { name: /Primeira/ }));
+    await user.click(within(dialog).getByRole('button', { name: /Adicionar/ }));
+
+    expect(within(dialog).getByRole('button', { name: 'Fechar' })).toBeDisabled();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('dialog', { name: 'Adicionar músicas' })).toBeInTheDocument();
+
+    const pendingCheckbox = within(dialog).getByRole('checkbox', { name: /Primeira/ });
+    expect(pendingCheckbox).toBeDisabled();
+    expect(dialog).toHaveFocus();
+    expect(within(dialog).getByRole('status')).toHaveTextContent('1 selecionada');
+    expect(within(dialog).getByRole('button', { name: 'Adicionando…' })).toBeDisabled();
+
+    finishAdd?.();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('mantém o erro de adição no diálogo e preserva a seleção para nova tentativa', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    vi.mocked(addSongsToRepertory).mockRejectedValueOnce(new Error('Falha ao adicionar.'));
+    renderEditor();
+
+    const trigger = screen.getByRole('button', { name: 'Adicionar músicas' });
+    await user.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar músicas' });
+    const checkbox = within(dialog).getByRole('checkbox', { name: /Primeira/ });
+    await user.click(checkbox);
+    await user.click(within(dialog).getByRole('button', { name: /Adicionar/ }));
+
+    const alert = await within(dialog).findByRole('alert');
+    expect(alert).toHaveTextContent('Falha ao adicionar.');
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toBeEnabled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it('fecha o diálogo e oferece atualizar a versão quando a adição conflita', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    const conflict = new Error(
+      'O repertório foi alterado em outro lugar. Recarregue antes de salvar novamente.',
+    );
+    conflict.name = 'RepertoryRevisionConflictError';
+    vi.mocked(addSongsToRepertory).mockRejectedValueOnce(conflict);
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar músicas' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar músicas' });
+    await user.click(within(dialog).getByRole('checkbox', { name: /Primeira/ }));
+    await user.click(within(dialog).getByRole('button', { name: /Adicionar/ }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('alterado em outro dispositivo ou aba');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Atualizar versão' })).toBeInTheDocument();
   });
 
   it('impede reordenar duas vezes enquanto a primeira alteração está pendente', async () => {
@@ -173,13 +357,16 @@ describe('RepertoryEditorPage', () => {
     renderEditor();
 
     const down = screen.getByRole('button', { name: 'Descer Primeira' });
+    const add = screen.getByRole('button', { name: 'Adicionar músicas' });
     await user.click(down);
     expect(down).toBeDisabled();
+    expect(add).toBeDisabled();
     await user.click(down);
     expect(reorderRepertoryItem).toHaveBeenCalledTimes(1);
 
     finishMove?.();
     await waitFor(() => expect(down).toBeEnabled());
+    expect(add).toBeEnabled();
   });
 
   it('identifica o campo de tom próprio pela música correspondente', async () => {
@@ -192,9 +379,101 @@ describe('RepertoryEditorPage', () => {
     });
     renderEditor();
 
-    await user.click(screen.getByRole('button', { name: 'Editar tom próprio de Primeira' }));
+    await user.click(screen.getByRole('button', { name: /Editar tom próprio de Primeira/ }));
 
     expect(screen.getByRole('textbox', { name: 'Tom próprio de Primeira' })).toBeInTheDocument();
+  });
+
+  it('salva o tom próprio e fecha o editor', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([{ song: songA, position: 1000 }]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    vi.mocked(updateRepertoryItemKey).mockResolvedValueOnce(undefined);
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: /Editar tom próprio de Primeira/ }));
+    const input = screen.getByRole('textbox', { name: 'Tom próprio de Primeira' });
+    await user.type(input, 'E');
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(updateRepertoryItemKey).toHaveBeenCalledWith('item-song-a', 'E'));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('textbox', { name: 'Tom próprio de Primeira' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText('Tom próprio atualizado.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Editar tom próprio de Primeira/ })).toHaveFocus();
+  });
+
+  it('cancela a edição do tom com Escape sem gravar', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([{ song: songA, position: 1000 }]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: /Editar tom próprio de Primeira/ }));
+    await user.type(screen.getByRole('textbox', { name: 'Tom próprio de Primeira' }), 'E');
+    await user.keyboard('{Escape}');
+
+    expect(
+      screen.queryByRole('textbox', { name: 'Tom próprio de Primeira' }),
+    ).not.toBeInTheDocument();
+    expect(updateRepertoryItemKey).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /Editar tom próprio de Primeira/ })).toHaveFocus();
+  });
+
+  it('não grava o tom quando o valor não mudou', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([{ song: songA, position: 1000 }]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: /Editar tom próprio de Primeira/ }));
+    await user.keyboard('{Enter}');
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('textbox', { name: 'Tom próprio de Primeira' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(updateRepertoryItemKey).not.toHaveBeenCalled();
+  });
+
+  it('mantém o valor digitado quando o tom próprio é rejeitado', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useRepertoryDetail).mockReturnValue({
+      data: detailWith([{ song: songA, position: 1000 }]),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    vi.mocked(updateRepertoryItemKey).mockRejectedValueOnce(
+      new Error('O tom próprio não foi reconhecido.'),
+    );
+    renderEditor();
+
+    await user.click(screen.getByRole('button', { name: /Editar tom próprio de Primeira/ }));
+    const input = screen.getByRole('textbox', { name: 'Tom próprio de Primeira' });
+    await user.type(input, 'H');
+    await user.keyboard('{Enter}');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('O tom próprio não foi reconhecido.');
+    expect(screen.getByRole('textbox', { name: 'Tom próprio de Primeira' })).toHaveValue('H');
+    expect(screen.getByRole('textbox', { name: 'Tom próprio de Primeira' })).toHaveFocus();
   });
 
   it('devolve o foco ao botão Renomear ao cancelar a edição do título', async () => {
