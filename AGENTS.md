@@ -343,6 +343,12 @@ Evite:
 
 A interface deve parecer um produto real, cuidadosamente projetado.
 
+### Governança visual
+
+- Toda tarefa que crie, altere ou revise interfaces, componentes, estilos ou fluxos de tela deve consultar obrigatoriamente `DESIGN.md`, na raiz do projeto, em conjunto com as diretrizes deste arquivo (`AGENTS.md`).
+- As regras de identidade visual, tokens, tipografia, componentes, acessibilidade e responsividade definidas em `DESIGN.md` devem ser respeitadas. Divergências intencionais precisam ser justificadas na entrega e documentadas quando alterarem um padrão permanente.
+- `src/styles/tokens.css` permanece como fonte única dos valores concretos dos tokens visuais.
+
 ## 12. TESTES E PREVENÇÃO DE BUGS
 
 Testes são obrigatórios para funcionalidades críticas.
@@ -435,6 +441,7 @@ Durante o desenvolvimento:
 
 - Analise os arquivos antes de modificá-los.
 - Leia este AGENTS.md antes de executar tarefas.
+- Consulte `DESIGN.md` antes de criar, alterar ou revisar interfaces, componentes ou estilos.
 - Não invente informações sobre o código.
 - Não assuma que funcionalidades existem sem verificar.
 - Não ignore erros de compilação.
