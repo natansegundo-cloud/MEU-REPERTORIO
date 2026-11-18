@@ -37,7 +37,7 @@
 .title {
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-snug);
 }
 
 .subtitle {
@@ -100,7 +100,7 @@
   box-shadow: none;
   color: var(--color-text);
   font: inherit;
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
 }
 
 .search input:hover,

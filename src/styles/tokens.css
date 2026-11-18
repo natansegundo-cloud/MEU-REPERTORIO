@@ -2,8 +2,9 @@
   color-scheme: light;
 
   --font-sans:
-    'Bricolage Grotesque', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Segoe UI',
+    Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
   --text-2xs: 0.6875rem;
   --text-xs: 0.75rem;
@@ -14,13 +15,16 @@
   --text-2xl: 1.75rem;
   --text-3xl: clamp(2rem, 1.4rem + 2.2vw, 2.75rem);
 
-  --leading-tight: 1.14;
-  --leading-normal: 1.55;
+  --leading-tight: 1.18;
+  --leading-normal: 1.5;
 
   --weight-regular: 400;
-  --weight-medium: 520;
+  --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
+
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.012em;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -32,8 +36,8 @@
   --space-10: 2.5rem;
   --space-12: 3rem;
 
-  --radius-sm: 0.3125rem;
-  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5625rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-full: 999px;
@@ -42,126 +46,105 @@
   --control-height-md: 2.75rem;
   --control-height-lg: 3.25rem;
 
-  --transition-fast: 140ms ease;
-  --transition-base: 220ms ease;
+  --transition-fast: 140ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-base: 220ms cubic-bezier(0.32, 0.72, 0, 1);
 
   --layout-sidebar: 16rem;
   --layout-content: 74rem;
 
-  --color-bg: #f5f2ea;
-  --color-surface: #fbf9f4;
+  /* Tema Claro — Alabastro neutro iOS e superfícies brancas luminosas */
+  --color-bg: #f5f5f7;
+  --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
-  --color-surface-muted: #eeeadf;
-  --color-surface-interactive: #f1ebdd;
-  --color-text: #202320;
-  --color-text-muted: #5f635d;
-  --color-text-subtle: #6c7069;
-  --color-border: #e4ded1;
-  --color-border-strong: #cdc4b2;
-  --color-accent: #9a6414;
-  --color-accent-hover: #845411;
-  --color-accent-active: #6f460d;
-  --color-accent-text: #855711;
-  --color-accent-soft: #f4e8d2;
-  --color-accent-contrast: #fffaf0;
-  --color-success: #2f6f52;
-  --color-success-soft: #e2f0e7;
-  --color-warning: #7d5410;
-  --color-warning-soft: #f6ecd7;
-  --color-danger: #a83f36;
-  --color-danger-soft: #f7e3df;
-  --color-focus: #a06a15;
-  --color-overlay: rgb(24 21 15 / 38%);
+  --color-surface-muted: #ececef;
+  --color-surface-interactive: #e4e4e9;
+  --color-text: #1d1d1f;
+  --color-text-muted: #515158;
+  --color-text-subtle: #6d6d76;
+  --color-border: #e2e2e8;
+  --color-border-strong: #c7c7cf;
 
-  --shadow-sm: 0 1px 2px rgb(48 43 32 / 6%);
-  --shadow-md: 0 14px 32px rgb(48 43 32 / 10%);
-  --shadow-menu: 0 18px 44px rgb(48 43 32 / 14%);
-  --shadow-fab: 0 10px 24px rgb(48 43 32 / 22%);
-  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-focus) 28%, transparent);
+  /* Destaque musical âmbar refinado */
+  --color-accent: #b45309;
+  --color-accent-hover: #9a4406;
+  --color-accent-active: #823805;
+  --color-accent-text: #a14a07;
+  --color-accent-soft: #fef3e2;
+  --color-accent-contrast: #ffffff;
 
-  /* Modo Show usa uma superfície de palco fixa, independente do tema. */
+  /* Estados semânticos */
+  --color-success: #1d7a46;
+  --color-success-soft: #eaf7ef;
+  --color-warning: #9a5b00;
+  --color-warning-soft: #fff5e5;
+  --color-danger: #c92a2a;
+  --color-danger-soft: #feecec;
+  --color-danger-solid: #c92a2a;
+  --color-danger-solid-hover: #b02020;
+  --color-danger-solid-active: #961b1b;
+  --color-danger-contrast: #ffffff;
+  --color-focus: #b45309;
+  --color-overlay: rgb(15 17 21 / 36%);
+
+  --shadow-sm: 0 1px 2px rgb(15 17 21 / 5%);
+  --shadow-md: 0 10px 28px rgb(15 17 21 / 8%), 0 2px 6px rgb(15 17 21 / 4%);
+  --shadow-menu: 0 16px 40px rgb(15 17 21 / 12%), 0 2px 8px rgb(15 17 21 / 5%);
+  --shadow-fab: 0 10px 24px rgb(15 17 21 / 18%);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-focus) 26%, transparent);
+
+  /* Modo Show usa superfície de palco escura fixa, independente do tema. */
   --color-stage-bg: #0b0c0e;
-  --color-stage-surface: #141518;
-  --color-stage-border: #2a2e34;
-  --color-stage-text: #f3eee4;
-  --color-stage-muted: #a9a6a0;
-  --color-stage-subtle: #7f827f;
-  --color-stage-accent: #d7a24a;
-  --color-stage-accent-soft: #2a2318;
-  --color-stage-accent-contrast: #17140f;
-  --color-stage-chord: #dcae5e;
-  --color-stage-success: #7cc9a3;
-  --color-stage-warning: #e3b880;
-  --color-stage-danger: #f0938a;
+  --color-stage-surface: #16171b;
+  --color-stage-border: #2a2e36;
+  --color-stage-text: #f2f2f5;
+  --color-stage-muted: #a1a3ad;
+  --color-stage-subtle: #7c7f8a;
+  --color-stage-accent: #dfa64b;
+  --color-stage-accent-soft: #2c2316;
+  --color-stage-accent-contrast: #16120a;
+  --color-stage-chord: #e5b45f;
+  --color-stage-success: #6ad09b;
+  --color-stage-warning: #e8b968;
+  --color-stage-danger: #f47a7a;
   --color-stage-overlay: rgb(0 0 0 / 66%);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    color-scheme: dark;
-
-    --color-bg: #0d0e10;
-    --color-surface: #141518;
-    --color-surface-raised: #191b1f;
-    --color-surface-muted: #1f2126;
-    --color-surface-interactive: #24262c;
-    --color-text: #f3eee4;
-    --color-text-muted: #a9a6a0;
-    --color-text-subtle: #7f827f;
-    --color-border: #282b31;
-    --color-border-strong: #3a3e45;
-    --color-accent: #d7a24a;
-    --color-accent-hover: #e3b25f;
-    --color-accent-active: #c08c34;
-    --color-accent-text: #e5b666;
-    --color-accent-soft: #2a2318;
-    --color-accent-contrast: #17140f;
-    --color-success: #7cc9a3;
-    --color-success-soft: #16291f;
-    --color-warning: #e3b880;
-    --color-warning-soft: #2d2418;
-    --color-danger: #f0938a;
-    --color-danger-soft: #321a18;
-    --color-focus: #e0ac52;
-    --color-overlay: rgb(0 0 0 / 62%);
-
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 28%);
-    --shadow-md: 0 16px 36px rgb(0 0 0 / 34%);
-    --shadow-menu: 0 20px 48px rgb(0 0 0 / 46%);
-    --shadow-fab: 0 12px 28px rgb(0 0 0 / 42%);
-  }
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --color-bg: #0d0e10;
-  --color-surface: #141518;
-  --color-surface-raised: #191b1f;
-  --color-surface-muted: #1f2126;
-  --color-surface-interactive: #24262c;
-  --color-text: #f3eee4;
-  --color-text-muted: #a9a6a0;
-  --color-text-subtle: #7f827f;
-  --color-border: #282b31;
-  --color-border-strong: #3a3e45;
-  --color-accent: #d7a24a;
-  --color-accent-hover: #e3b25f;
-  --color-accent-active: #c08c34;
-  --color-accent-text: #e5b666;
-  --color-accent-soft: #2a2318;
-  --color-accent-contrast: #17140f;
-  --color-success: #7cc9a3;
-  --color-success-soft: #16291f;
-  --color-warning: #e3b880;
-  --color-warning-soft: #2d2418;
-  --color-danger: #f0938a;
-  --color-danger-soft: #321a18;
-  --color-focus: #e0ac52;
-  --color-overlay: rgb(0 0 0 / 62%);
+  --color-bg: #0b0c0e;
+  --color-surface: #15171b;
+  --color-surface-raised: #242730;
+  --color-surface-muted: #1c1e24;
+  --color-surface-interactive: #2c303a;
+  --color-text: #f2f2f5;
+  --color-text-muted: #a1a3ad;
+  --color-text-subtle: #7c7f8a;
+  --color-border: #272a32;
+  --color-border-strong: #3a3e4a;
 
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 28%);
-  --shadow-md: 0 16px 36px rgb(0 0 0 / 34%);
-  --shadow-menu: 0 20px 48px rgb(0 0 0 / 46%);
-  --shadow-fab: 0 12px 28px rgb(0 0 0 / 42%);
+  --color-accent: #dfa64b;
+  --color-accent-hover: #e9b560;
+  --color-accent-active: #c88f35;
+  --color-accent-text: #e8b663;
+  --color-accent-soft: #2c2316;
+  --color-accent-contrast: #16120a;
+
+  --color-success: #6ad09b;
+  --color-success-soft: #14291f;
+  --color-warning: #e8b968;
+  --color-warning-soft: #2d2314;
+  --color-danger: #f47a7a;
+  --color-danger-soft: #2f181a;
+  --color-danger-solid: #dc2626;
+  --color-danger-solid-hover: #e53535;
+  --color-danger-solid-active: #b91c1c;
+  --color-danger-contrast: #ffffff;
+  --color-focus: #e5ae55;
+  --color-overlay: rgb(0 0 0 / 60%);
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 32%);
+  --shadow-md: 0 14px 34px rgb(0 0 0 / 38%);
+  --shadow-menu: 0 20px 48px rgb(0 0 0 / 50%);
+  --shadow-fab: 0 12px 28px rgb(0 0 0 / 46%);
 }

@@ -22,4 +22,22 @@ describe('Button', () => {
     expect(button).toHaveAttribute('data-variant', 'secondary');
     expect(button).toHaveAttribute('data-size', 'sm');
   });
+
+  it('suporta as variantes semânticas destrutivas danger e danger-soft', () => {
+    render(
+      <>
+        <Button variant="danger">Excluir</Button>
+        <Button variant="danger-soft">Remover</Button>
+      </>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Excluir' })).toHaveAttribute(
+      'data-variant',
+      'danger',
+    );
+    expect(screen.getByRole('button', { name: 'Remover' })).toHaveAttribute(
+      'data-variant',
+      'danger-soft',
+    );
+  });
 });

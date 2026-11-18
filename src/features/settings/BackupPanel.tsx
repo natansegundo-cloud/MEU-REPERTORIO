@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import {
   createBackup,
   downloadTextFile,
+  hydrateAppearance,
   planRestore,
   readBackupFile,
   restoreBackup,
@@ -128,6 +129,7 @@ export function BackupPanel() {
       const result = await restoreBackup(preview.backup, restoreMode, {
         onProgress: setProgress,
       });
+      await hydrateAppearance();
       setFeedback(
         `Restauração concluída: ${formatCount(result.added)} adicionado(s), ${formatCount(result.overwritten)} substituído(s), ${formatCount(result.conflicts)} conflito(s) preservado(s).`,
       );

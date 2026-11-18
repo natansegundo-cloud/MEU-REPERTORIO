@@ -6,7 +6,7 @@ const uiSources = {
     import: 'default',
     query: '?raw',
   }),
-  ...import.meta.glob('./{CloudPage,SettingsPage}.tsx', {
+  ...import.meta.glob('./{AppearancePanel,CloudPage,SettingsPage}.tsx', {
     eager: true,
     import: 'default',
     query: '?raw',

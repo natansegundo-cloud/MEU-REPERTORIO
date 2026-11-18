@@ -22,7 +22,7 @@
   font-size: var(--text-3xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .description {

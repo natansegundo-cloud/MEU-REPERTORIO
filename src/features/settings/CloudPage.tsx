@@ -2,7 +2,7 @@ import { Cloud, KeyRound, LogIn, LogOut, RefreshCw, ShieldAlert } from 'lucide-r
 import { useEffect, useState } from 'react';
 
 import { SettingsCard } from '@/components/settings/SettingsCard';
-import { Badge } from '@/components/ui/Badge';
+import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
   cloudSyncController,
@@ -23,10 +23,11 @@ const STATUS_LABELS: Record<CloudStatus, string> = {
   'account-mismatch': 'Conta diferente',
 };
 
-function statusTone(status: CloudStatus): 'neutral' | 'accent' | 'success' | 'warning' {
+function statusTone(status: CloudStatus): BadgeTone {
   if (status === 'synced') return 'success';
   if (status === 'syncing') return 'accent';
-  if (status === 'offline' || status === 'error' || status === 'account-mismatch') return 'warning';
+  if (status === 'error') return 'danger';
+  if (status === 'offline' || status === 'account-mismatch') return 'warning';
   return 'neutral';
 }
 

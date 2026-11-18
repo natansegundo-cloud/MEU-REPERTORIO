@@ -12,8 +12,28 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Meu Repertório" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="theme-color" content="#f5f2ea" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0d0e10" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f5f5f7" />
+    <script>
+      (function () {
+        var mode = 'system';
+        try {
+          var saved = localStorage.getItem('meu-repertorio:appearance');
+          if (saved === 'light' || saved === 'dark' || saved === 'system') mode = saved;
+        } catch (_) {}
+        var dark =
+          mode === 'dark' ||
+          (mode === 'system' &&
+            typeof matchMedia === 'function' &&
+            matchMedia('(prefers-color-scheme: dark)').matches);
+        var theme = dark ? 'dark' : 'light';
+        var root = document.documentElement;
+        root.dataset.theme = theme;
+        root.style.colorScheme = theme;
+        var isStage = /^#\/?show(?:\/|$)/.test(location.hash);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', isStage || dark ? '#0b0c0e' : '#f5f5f7');
+      })();
+    </script>
     <link rel="icon" href="/brand/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" sizes="192x192" href="/brand/icon-192.png" />
     <title>Meu Repertório</title>

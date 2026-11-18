@@ -9,23 +9,11 @@
   justify-content: space-between;
   gap: var(--space-3);
 }
-.eyebrow {
-  margin-bottom: var(--space-2);
-  color: var(--color-text-subtle);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
 .title {
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
-  letter-spacing: -0.035em;
-}
-.description {
-  margin-top: var(--space-2);
-  color: var(--color-text-muted);
+  letter-spacing: var(--tracking-tight);
 }
 .createPanel {
   display: flex;
@@ -48,18 +36,6 @@
 .renameForm input {
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-  color: var(--color-text);
-  padding: 0.7rem 0.8rem;
-  font: inherit;
-}
-.createField input:focus,
-.renameForm input:focus {
-  border-color: var(--color-focus);
-  box-shadow: var(--focus-ring);
-  outline: 0;
 }
 
 .search:focus-within {
@@ -78,20 +54,26 @@
   gap: var(--space-2);
   flex: 1;
   max-width: 32rem;
+  min-height: var(--control-height-md);
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
+  background: var(--color-surface-raised);
+  color: var(--color-text-subtle);
 }
 .search input {
   width: 100%;
+  min-width: 0;
+  padding: 0;
   border: 0;
+  border-radius: 0;
   outline: 0;
   background: transparent;
+  box-shadow: none;
   color: var(--color-text);
-  padding: 0.75rem 0;
-  font: inherit;
+}
+.search input:focus {
+  box-shadow: none;
 }
 .count {
   flex: none;

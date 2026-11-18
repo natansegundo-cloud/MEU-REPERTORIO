@@ -6,6 +6,7 @@ import { SettingsCard } from '@/components/settings/SettingsCard';
 import { InstallHelp } from '@/components/system/InstallHelp';
 import { requestPersistentStorage, type StoragePersistenceStatus } from '@/services';
 
+import { AppearancePanel } from './AppearancePanel';
 import { BackupPanel } from './BackupPanel';
 import { CloudPage } from './CloudPage';
 import styles from './SettingsPage.module.css';
@@ -20,6 +21,15 @@ export function SettingsPage() {
   return (
     <div className={styles.page}>
       <PageHeader title="Preferências" />
+
+      <section className={styles.section} aria-labelledby="appearance-section-title">
+        <h2 id="appearance-section-title" className={styles.sectionTitle}>
+          Aparência
+        </h2>
+        <div className={styles.cards}>
+          <AppearancePanel />
+        </div>
+      </section>
 
       <section className={styles.section} aria-labelledby="data-section-title">
         <h2 id="data-section-title" className={styles.sectionTitle}>

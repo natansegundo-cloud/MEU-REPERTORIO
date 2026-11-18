@@ -28,7 +28,7 @@
   font-size: var(--text-xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-snug);
 }
 
 .description {

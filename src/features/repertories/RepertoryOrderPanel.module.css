@@ -186,16 +186,9 @@
 
 .toneEditor input {
   width: 5.5rem;
-  min-height: 2rem;
-  height: 2rem;
+  min-height: var(--control-height-sm);
   padding: 0 var(--space-2);
-  font-size: var(--text-sm);
-}
-
-.toneEditor input:focus {
-  border-color: var(--color-focus);
-  box-shadow: var(--focus-ring);
-  outline: 0;
+  font-size: var(--text-base);
 }
 
 .toneHint {

@@ -4,7 +4,7 @@ import { cn } from '@/utils/cn';
 
 import styles from './Badge.module.css';
 
-type BadgeTone = 'neutral' | 'accent' | 'success' | 'warning';
+export type BadgeTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger';
 
 interface BadgeProps {
   children: ReactNode;

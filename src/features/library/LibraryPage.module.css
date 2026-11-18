@@ -52,26 +52,11 @@
   gap: var(--space-3);
 }
 
-.eyebrow {
-  margin-bottom: var(--space-1);
-  color: var(--color-text-subtle);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
 .title {
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
-  letter-spacing: -0.035em;
-}
-
-.description {
-  margin-top: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-tight);
 }
 
 .toolbar {
@@ -101,10 +86,17 @@
 .search input {
   width: 100%;
   min-width: 0;
+  padding: 0;
   border: 0;
+  border-radius: 0;
   outline: 0;
   background: transparent;
+  box-shadow: none;
   color: var(--color-text);
+}
+
+.search input:focus {
+  box-shadow: none;
 }
 
 .count {

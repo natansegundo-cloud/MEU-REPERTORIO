@@ -4,7 +4,7 @@
   gap: var(--space-1);
   width: fit-content;
   min-height: 1.625rem;
-  padding: 0.25rem 0.5rem;
+  padding: 0.25rem 0.55rem;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
@@ -32,4 +32,10 @@
 .badge[data-tone='warning'] {
   background: var(--color-warning-soft);
   color: var(--color-warning);
+}
+
+.badge[data-tone='danger'] {
+  border-color: color-mix(in srgb, var(--color-danger) 20%, transparent);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }

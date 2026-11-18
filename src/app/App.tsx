@@ -13,6 +13,7 @@ import { RepertoriesPage, RepertoryEditorPage } from '@/features/repertories';
 import { ShowModePage } from '@/features/show-mode';
 import { FavoritesPage } from '@/features/favorites/FavoritesPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
+import { setThemeSurface } from '@/services';
 import { useCloudSync } from '@/sync';
 import type { Song } from '@/types';
 
@@ -65,6 +66,10 @@ export function App() {
   const router = useAppRouter(routeGuard);
   const { route } = router;
   const activeSection = sectionForRoute(route);
+
+  useEffect(() => {
+    setThemeSurface(route.name === 'show' ? 'stage' : 'app');
+  }, [route.name]);
 
   useEffect(() => {
     const handleUpdate = (): void => setUpdateAvailable(true);

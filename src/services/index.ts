@@ -22,6 +22,7 @@ export {
 
 export * from './repertories';
 export * from './preferences';
+export * from './appearance';
 export * from './favorites';
 export * from './storage';
 export * from './backup';

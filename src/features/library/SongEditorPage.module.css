@@ -38,7 +38,7 @@
   font-size: var(--text-3xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-tight);
 }
 .description {
   margin-top: var(--space-2);
@@ -79,21 +79,6 @@
 .chordRow input {
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-  color: var(--color-text);
-  padding: 0.7rem 0.8rem;
-  font: inherit;
-}
-.field input:focus,
-.field textarea:focus,
-.lineField input:focus,
-.lineField textarea:focus,
-.chordRow input:focus {
-  border-color: var(--color-focus);
-  box-shadow: var(--focus-ring);
-  outline: 0;
 }
 .wideField {
   grid-column: 1 / -1;

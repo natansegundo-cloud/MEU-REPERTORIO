@@ -40,7 +40,7 @@
   font-size: var(--text-3xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .description,
@@ -60,8 +60,8 @@
 .picker input {
   width: 100%;
   color: var(--color-text-muted);
-  font: inherit;
-  font-size: var(--text-sm);
+  font-family: inherit;
+  font-size: var(--text-base);
 }
 
 .picker input[type='file']::file-selector-button {
@@ -87,8 +87,7 @@
 }
 
 .feedback,
-.error,
-.success {
+.error {
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
@@ -102,11 +101,6 @@
 .error {
   color: var(--color-danger);
   background: var(--color-danger-soft);
-}
-
-.success {
-  color: var(--color-success);
-  background: var(--color-success-soft);
 }
 
 .summary {

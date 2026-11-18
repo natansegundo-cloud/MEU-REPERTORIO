@@ -177,7 +177,9 @@ describe('CloudPage', () => {
     const errorController = new CloudSyncController(failingBackend);
     controllers.push(errorController);
     render(<CloudPage syncController={errorController} />);
-    expect(await screen.findByText('Erro')).toBeInTheDocument();
+    const errorBadge = await screen.findByText('Erro');
+    expect(errorBadge).toBeInTheDocument();
+    expect(errorBadge).toHaveAttribute('data-tone', 'danger');
 
     const originalOnline = navigator.onLine;
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });

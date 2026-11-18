@@ -11,6 +11,8 @@
   font-weight: var(--weight-semibold);
   letter-spacing: -0.01em;
   line-height: 1;
+  touch-action: manipulation;
+  user-select: none;
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
@@ -19,16 +21,12 @@
 }
 
 .button:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: scale(0.985);
 }
 
 .button[data-variant='primary'] {
   background: var(--color-accent);
   color: var(--color-accent-contrast);
-}
-
-.button[data-variant='primary']:hover:not(:disabled) {
-  background: var(--color-accent-hover);
 }
 
 .button[data-variant='primary']:active:not(:disabled) {
@@ -41,8 +39,7 @@
   color: var(--color-text);
 }
 
-.button[data-variant='secondary']:hover:not(:disabled) {
-  border-color: var(--color-text-subtle);
+.button[data-variant='secondary']:active:not(:disabled) {
   background: var(--color-surface-interactive);
 }
 
@@ -51,9 +48,53 @@
   color: var(--color-text-muted);
 }
 
-.button[data-variant='ghost']:hover:not(:disabled) {
+.button[data-variant='ghost']:active:not(:disabled) {
   background: var(--color-surface-interactive);
   color: var(--color-text);
+}
+
+.button[data-variant='danger'] {
+  background: var(--color-danger-solid);
+  color: var(--color-danger-contrast);
+}
+
+.button[data-variant='danger']:active:not(:disabled) {
+  background: var(--color-danger-solid-active);
+}
+
+.button[data-variant='danger-soft'] {
+  border-color: color-mix(in srgb, var(--color-danger) 24%, transparent);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.button[data-variant='danger-soft']:active:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger) 20%, var(--color-danger-soft));
+}
+
+@media (hover: hover) {
+  .button[data-variant='primary']:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+
+  .button[data-variant='secondary']:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--color-text-subtle) 55%, var(--color-border-strong));
+    background: var(--color-surface-muted);
+  }
+
+  .button[data-variant='ghost']:hover:not(:disabled) {
+    background: var(--color-surface-interactive);
+    color: var(--color-text);
+  }
+
+  .button[data-variant='danger']:hover:not(:disabled) {
+    background: var(--color-danger-solid-hover);
+  }
+
+  .button[data-variant='danger-soft']:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
+    background: color-mix(in srgb, var(--color-danger) 14%, var(--color-danger-soft));
+  }
 }
 
 .button[data-size='sm'] {
@@ -62,5 +103,5 @@
 }
 
 .button:disabled {
-  opacity: 0.5;
+  opacity: 0.48;
 }

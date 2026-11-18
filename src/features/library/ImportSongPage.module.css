@@ -39,7 +39,7 @@
   font-size: var(--text-3xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .description {
@@ -82,49 +82,32 @@
   color: var(--color-warning);
 }
 
-.metadata input,
-.contentField textarea {
+.metadata input {
   width: 100%;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-  color: var(--color-text);
-  outline: 0;
 }
 
 .notesField textarea {
   width: 100%;
   min-height: 6rem;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-  color: var(--color-text);
-  font: inherit;
   resize: vertical;
 }
 
-.metadata input {
-  min-height: 2.75rem;
-  padding: 0 var(--space-3);
-}
-
 .contentField textarea {
+  width: 100%;
   min-height: 22rem;
   padding: var(--space-4);
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: var(--weight-regular);
   line-height: 1.6;
   resize: vertical;
   white-space: pre;
 }
 
-.metadata input:focus,
-.contentField textarea:focus,
-.notesField textarea:focus {
-  border-color: var(--color-focus);
-  box-shadow: var(--focus-ring);
+@media (min-width: 861px) and (pointer: fine) {
+  .contentField textarea {
+    font-size: var(--text-sm);
+  }
 }
 
 .fieldHeading {
